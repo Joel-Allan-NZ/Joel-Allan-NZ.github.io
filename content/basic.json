@@ -1,0 +1,46 @@
+{
+  "years": [
+    {
+      "year": "2024",
+      "days": [
+        {
+          "day": 1,
+          "part-one-solution": "stuff.js",
+          "part-one-explanation": "EZ mode bois",
+          "part-two-solution": "stuff.js",
+          "part-two-explanation": "Slightly less EZ mode bois",
+          "visualization": "nah"
+        },
+        {
+          "day": 2,
+          "part-one-solution": "stuff2.js",
+          "part-one-explanation": "EZ mode bois",
+          "part-two-solution": "stuff2.js",
+          "part-two-explanation": "Slightly less EZ mode bois",
+          "visualization": "nah"
+        }
+      ]
+    },
+    {
+      "year": "2023",
+      "days": [
+        {
+          "day": 1,
+          "part-one-solution": "stuff.js",
+          "part-one-explanation": "EZ mode bois",
+          "part-two-solution": "stuff.js",
+          "part-two-explanation": "Slightly less EZ mode bois",
+          "visualization": "nah"
+        },
+        {
+          "day": 2,
+          "part-one-solution": "stuff2.js",
+          "part-one-explanation": "EZ mode bois",
+          "part-two-solution": "stuff2.js",
+          "part-two-explanation": "Slightly less EZ mode bois",
+          "visualization": "nah"
+        }
+      ]
+    }
+  ]
+}
