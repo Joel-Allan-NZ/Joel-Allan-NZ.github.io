@@ -1,31 +1,40 @@
 export function partOne(input: string[]): number | string {
-  const left: number[] = []
-  const right: number[] = []
+  return input.reduce((sum, current) => {
+    const parsedLine = current.split(/\s+/).map((y) => parseInt(y))
+    return areLevelsSafe(parsedLine) ? sum + 1 : sum
+  }, 0)
+}
 
-  input.forEach((x) => {
-    const s = x.split(/\s+/).map((y) => parseInt(y))
-    left.push(s[0])
-    right.push(s[1])
+function areLevelsSafe(levels: number[]): boolean {
+  let increasing: boolean | null = null
+
+  return levels.slice(0, -1).every((current, index) => {
+    increasing ??= levels[index + 1] > current
+
+    return (
+      increasing == levels[index + 1] > current &&
+      levels[index + 1] != current &&
+      Math.abs(levels[index + 1] - current) < 4
+    )
   })
-  right.sort()
-
-  return left
-    .sort()
-    .reduce((sum, current, index) => sum + Math.abs(right[index] - current), 0)
 }
 
 export function partTwo(input: string[]): number | string {
-  const left: number[] = []
-  const right: Map<number, number> = new Map()
+  return input.reduce((sum, current) => {
+    const parsedLine = current.split(/\s+/).map((y) => parseInt(y))
+    return areLevelsSafeWithDampener(parsedLine) ? sum + 1 : sum
+  }, 0)
+}
 
-  input.forEach((x) => {
-    const s = x.split(/\s+/).map((y) => parseInt(y))
-    left.push(s[0])
-    right.set(s[1], (right.get(s[1]) ?? 0) + 1)
-  })
+function areLevelsSafeWithDampener(levels: number[]): boolean {
+  if (areLevelsSafe(levels)) return true
 
-  return left.reduce(
-    (sum, current) => sum + current * (right.get(current) ?? 0),
-    0
+  return (
+    levels.find((level, index) => {
+      return areLevelsSafe([
+        ...levels.slice(0, index),
+        ...levels.slice(index + 1),
+      ])
+    }) !== undefined
   )
 }
