@@ -1,19 +1,5 @@
----
-slug: '/2024/3'
-year: 2024
-puzz: 3
----
+import { match } from 'assert'
 
-## Part One
-
-Our first "just use regexp" problem of the year.
-<br><br>
-
-`String.prototype.matchAll()` with capture groups returns a match object in the form `[totalmatch, capture1, capture2, ...]`, so we can trivially access our desired numbers as a collection of pairs of capture groups.
-<br><br>
-I opted to then defer the actual number parsing and math to a helper function, (correctly) expecting that I'd need to use it again in part 2.
-
-```js
 export function partOne(input: string[]): number | string {
   const singleLineInput = input.reduce((total, current) => total + current, '')
   const matches =
@@ -28,19 +14,7 @@ function valueOfMatches(matches: string[][]): number {
     0
   )
 }
-```
 
-## Part Two
-
-There's no doubt in my mind that you could also complete part 2 with regexp, perhaps using lookbehind to ensure that there is a _do()_ more recently than a _don't()_.
-<br><br>
-However, this seemed like it would end up being a headache if requiring any debugging, so I opted for a more typescript-y approach. I find the ranges of values that start with a _don't()_ and end with a _do()_ (ie the ranges where we need to ignore _mult()_), and then simply filtered out any match that started within those ranges.
-<br><br>
-Confident that there would be at most 2<sup>31</sup> characters within the input, I opted to use 2<sup>32</sup> as a catch-all maximum range value.
-<br><br>
-Rather than filter out redundant _don't()_ or _do()_ values up front, `findDisabledRanges()` handles them with a simple `forEach()` loop.
-
-```js
 export function partTwo(input: string[]): number | string {
   const singleLineInput = input.reduce((total, current) => total + current, '')
   const matches =
@@ -79,4 +53,3 @@ function findDisabledRanges(donts: number[], dos: number[]): number[][] {
   })
   return disabledRanges
 }
-```

@@ -36,11 +36,12 @@ function DayYear({ data }) {
           {frontmatter.year} Day {frontmatter.puzz}
         </h1>
         <div dangerouslySetInnerHTML={{ __html: html }} />
+        <div>Try my solutions for yourself!</div>
         <div>
           <label htmlFor="input">Puzzle Input</label>
           <textarea
             name="input"
-            className="w-full"
+            className="w-full border-2"
             value={input}
             onChange={(e) => inputChanged(e)}
           ></textarea>

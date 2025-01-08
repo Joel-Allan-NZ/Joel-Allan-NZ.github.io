@@ -27,14 +27,11 @@ export function partTwo(input: string[]): number | string {
 }
 
 function areLevelsSafeWithDampener(levels: number[]): boolean {
-  if (areLevelsSafe(levels)) return true
-
   return (
+    areLevelsSafe(levels) ||
     levels.find((level, index) => {
-      return areLevelsSafe([
-        ...levels.slice(0, index),
-        ...levels.slice(index + 1),
-      ])
+      const subLevel = [...levels.slice(0, index), ...levels.slice(index + 1)]
+      return areLevelsSafe(subLevel)
     }) !== undefined
   )
 }
