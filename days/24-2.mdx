@@ -1,5 +1,5 @@
 ---
-slug: '/2024/2'
+slug: 'advent-of-code/2024/2'
 year: 2024
 puzz: 2
 ---
@@ -8,10 +8,15 @@ puzz: 2
 
 Another simple problem to warm us up. We must count all lines in the input such that there's a monotonic increase (or decrease) beween values on that line,
 and no consecutive values on the line have a difference greater than 3.
-<br><br>
-I chose to approach it by considering each number but the last, and comparing them to the number at the next index, discovering if we're increasing or decreasing from the first pair of values.
-<br><br>
-There is a cost to this (we need to check equality between the paired values), but a more efficient solution doesn't leap to mind. At least `Array.prototype.every()` stops evaluating as soon as it resolves a failure.
+
+<br />
+I chose to approach it by considering each number but the last, and comparing them
+to the number at the next index, discovering if we're increasing or decreasing from
+the first pair of values.
+<br />
+There is a cost to this (we need to check equality between the paired values), but
+a more efficient solution doesn't leap to mind. At least `Array.prototype.every()`
+stops evaluating as soon as it resolves a failure.
 
 ```js
 function partOne(input: string[]): number | string {

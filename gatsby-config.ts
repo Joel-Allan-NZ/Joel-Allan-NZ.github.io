@@ -11,21 +11,22 @@ const config: GatsbyConfig = {
   graphqlTypegen: true,
   plugins: [
     'gatsby-plugin-postcss',
-    {
-      resolve: `gatsby-transformer-remark`,
-      options: {
-        plugins: [
-          {
-            resolve: `gatsby-remark-highlight-code`,
-            options: {
-              terminal: 'carbon',
-              theme: 'vscode',
-              lineNumbers: true,
-            },
-          },
-        ],
-      },
-    },
+    `gatsby-transformer-remark`,
+    // {
+    //   resolve: `gatsby-transformer-remark`,
+    //   options: {
+    //     plugins: [
+    //       {
+    //         resolve: `gatsby-remark-highlight-code`,
+    //         options: {
+    //           terminal: 'carbon',
+    //           theme: 'vscode',
+    //           lineNumbers: true,
+    //         },
+    //       },
+    //     ],
+    //   },
+    // },
     {
       resolve: `gatsby-transformer-yaml`,
       options: {
@@ -39,6 +40,7 @@ const config: GatsbyConfig = {
         },
       },
     },
+    `gatsby-plugin-mdx`,
     {
       resolve: `gatsby-source-filesystem`,
       options: {
