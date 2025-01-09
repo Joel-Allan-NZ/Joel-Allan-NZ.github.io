@@ -18,6 +18,8 @@ There is a cost to this (we need to check equality between the paired values), b
 a more efficient solution doesn't leap to mind. At least `Array.prototype.every()`
 stops evaluating as soon as it resolves a failure.
 
+<CodeBox names="typescript|C#">
+
 ```js
 function partOne(input: string[]): number | string {
   return input.reduce((sum, current) => {
@@ -41,11 +43,39 @@ function areLevelsSafe(levels: number[]): boolean {
 }
 ```
 
+```csharp
+public override object PartOne()
+{
+    var parsedInput = Input.Select(x => x.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                                          .Select(x => int.Parse(x))
+                                          .ToList());
+    return parsedInput.Count(line => AreLevelsSafe(line));
+}
+
+private static bool AreLevelsSafe(List<int> levels)
+{
+    bool? increasing = null;
+
+    return Enumerable.Range(0, levels.Count - 1).All(index =>
+    {
+        increasing ??= levels[index + 1] > levels[index];
+
+        return increasing == levels[index + 1] > levels[index] &&
+            Math.Abs(levels[index + 1] - levels[index]) < 4 &&
+            levels[index + 1] != levels[index];
+    });
+}
+```
+
+</CodeBox>
+
 ## Part Two
 
 Identical to part one, except if a line fails we must then also check if the line has at most a single 'bad' value. My somewhat lazy approach is to just feed partial lines back into `areLevelsSafe()`, using `Array.prototype.find()` to stop checking sub-lines on a success.
 
 Explicitly declaring `subLevel` is strictly unnecessary, but a bit more readable
+
+<CodeBox names="typescript|C#">
 
 ```js
 export function partTwo(input: string[]): number | string {
@@ -65,3 +95,26 @@ function areLevelsSafeWithDampener(levels: number[]): boolean {
   )
 }
 ```
+
+```csharp
+public override object PartTwo()
+{
+    var parsedInput = Input.Select(x => x.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                                          .Select(x => int.Parse(x))
+                                          .ToList());
+    return parsedInput.Count(line => AreLevelsSafeWithDampener(line));
+}
+
+private static bool AreLevelsSafeWithDampener(List<int> levels)
+{
+    if (AreLevelsSafe(levels))
+        return true;
+
+    return Enumerable.Range(0, levels.Count).Any(index =>
+    {
+        return AreLevelsSafe(levels.Where((x, i) => i != index).ToList());
+    });
+}
+```
+
+</CodeBox>

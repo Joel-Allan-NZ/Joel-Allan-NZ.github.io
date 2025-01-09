@@ -16,8 +16,7 @@ had been rotated 90 degrees clockwise.
 <br />
 I'm certainly not in love with the way prettier has arranged the parentheses within
 `countDiagonal()`, but hopefully it's still reasonably legible here.
-
-<CodeBox js="figs" csharp="sharps" />
+<CodeBox names="typescript|C#">
 
 ```js
 export function partOne(input: string[]): number | string {
@@ -60,6 +59,50 @@ function countDiagonal(input: string[]): number {
 }
 ```
 
+```csharp
+public override object PartOne()
+{
+  var rotated = Enumerable.Range(1, Input[0].Length)
+                          .Select(i => new string(Input.Select(x => x[^i]).ToArray()))
+                          .ToArray();
+
+  var count = Input.Sum(line => XmasRegex().Matches(line).Count + SamxRegex().Matches(line).Count);
+  count += rotated.Sum(line => XmasRegex().Matches(line).Count + SamxRegex().Matches(line).Count);
+
+  count += LeftToRightDownDiagonal(Input);
+  count += LeftToRightDownDiagonal(rotated);
+
+  return count;
+}
+private static int LeftToRightDownDiagonal(string[] input)
+{
+    int[] range = [0, 1, 2, 3];
+    var xmas = "XMAS";
+    int count = 0;
+
+    for (int y = 0; y < input.Length - 3; y++)
+    {
+        for (int x = 0; x < input[y].Length - 3; x++)
+            if (IsMatchStartPoint(x, y))
+                count++;
+    }
+    return count;
+
+    bool IsMatchStartPoint(int x, int y)
+    {
+        return range.All(offset => input[y + offset][x + offset] == xmas[offset]) ||
+            range.All(offset => input[y + offset][x + offset] == xmas[^(offset + 1)]);
+    }
+}
+[GeneratedRegex(@"XMAS")]
+internal static partial Regex XmasRegex();
+
+[GeneratedRegex(@"SAMX")]
+internal static partial Regex SamxRegex();
+```
+
+</CodeBox>
+
 ## Part Two
 
 A rarity where the second part is less fiddly than the first!
@@ -74,9 +117,9 @@ A rarity where the second part is less fiddly than the first!
   From there it's simply a matter of checking 'A' values in valid locations, and
   confirming they have the correct corners around them.
   <br />
-  Once again prettier is not terribly helpful at making nested
-  `Array.prototype.reduce()` legible outside of the editor itself, but hopefully
-  this is readable enough!
+Once again prettier is not terribly helpful at making nested `Array.prototype.reduce()`
+legible outside of the editor itself, but hopefully this is readable enough!
+<CodeBox names="typescript|C#">
 
 ```js
 export function partTwo(input: string[]): number | string {
@@ -110,3 +153,39 @@ function isACross(input: string[], y: number, x: number): boolean {
   return count.M == 2 && count.S == 2 && corners[0] != corners[3]
 }
 ```
+
+```csharp
+public override object PartTwo()
+{
+    int count = 0;
+    for (int y = 1; y < Input.Length - 1; y++)
+    {
+        for (int x = 1; x < Input[y].Length - 1; x++)
+        {
+            if (Input[y][x] == 'A' && IsACross(y, x))
+                count++;
+        }
+    }
+    return count;
+}
+private bool IsACross(int x, int y)
+{
+    List<char> corners =
+    [
+        Input[x - 1][y - 1],
+        Input[x + 1][y - 1],
+        Input[x - 1][y + 1],
+        Input[x + 1][y + 1]
+    ];
+
+    if (corners.Count(x => x == 'M') == 2 && corners.Count(x => x == 'S') == 2)
+    {
+        if (corners[0] != corners[3])
+            return true;
+    }
+
+    return false;
+}
+```
+
+</CodeBox>

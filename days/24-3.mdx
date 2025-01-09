@@ -14,6 +14,7 @@ Our first "just use regexp" problem of the year.
 
 <br />I opted to then defer the actual number parsing and math to a helper function,
 (correctly) expecting that I'd need to use it again in part 2.
+<CodeBox names="typescript|C#">
 
 ```js
 export function partOne(input: string[]): number | string {
@@ -32,6 +33,27 @@ function valueOfMatches(matches: string[][]): number {
 }
 ```
 
+```csharp
+public override object PartOne()
+{
+    return Input.Sum(line =>
+    {
+        var matches = Day3.MulRegex().Matches(line);
+        return SumMatches(matches);
+    });
+}
+private static int SumMatches(IEnumerable<Match> matches)
+{
+    return matches.Sum(match => match.Value[4..^1].Split(',')
+                                                  .Select(x => int.Parse(x))
+                                                  .Aggregate((x, y) => x * y));
+}
+
+[GeneratedRegex(@"mul\(\d+,\d+\)")]
+internal static partial Regex MulRegex();
+```
+
+</CodeBox>
 ## Part Two
 
 There's no doubt in my mind that you could also complete part 2 with regexp, perhaps using lookbehind to ensure that there is a _do()_ more recently than a _don't()_.
@@ -47,6 +69,7 @@ input, I opted to use 2<sup>32</sup> as a catch-all maximum range value.
 <br />
 Rather than filter out redundant _don't()_ or _do()_ values up front, `findDisabledRanges()`
 handles them with a simple `forEach()` loop.
+<CodeBox names="typescript|C#">
 
 ```js
 export function partTwo(input: string[]): number | string {
@@ -88,3 +111,41 @@ function findDisabledRanges(donts: number[], dos: number[]): number[][] {
   return disabledRanges
 }
 ```
+
+```csharp
+public override object PartTwo()
+{
+    var SingleLineInput = Input.Aggregate((x, y) => x + y);
+
+    var disabledRanges = GetDisabledRanges(DontRegex().Matches(SingleLineInput).Select(x => x.Index).ToList(),
+                                    DoRegex().Matches(SingleLineInput).Select(x => (int?)x.Index).ToList());
+
+    var matches = Day3.MulRegex().Matches(SingleLineInput);
+
+    var inDoRange = matches.Where(match =>
+    {
+        return !disabledRanges.Any(range => range.start < match.Index && range.end > match.Index);
+    }).ToList();
+
+    return SumMatches(inDoRange);
+}
+private static List<(int start, int end)> GetDisabledRanges(List<int> dontIndices, List<int?> doIndices)
+{
+    List<(int start, int end)> disabledRanges = [(dontIndices.First(), doIndices.FirstOrDefault(x => x > dontIndices.First()) ?? int.MaxValue)];
+
+    foreach (var dont in dontIndices.Skip(1))
+    {
+        if (dont > disabledRanges[^1].end)
+            disabledRanges.Add((dont, doIndices.FirstOrDefault(x => x > dont) ?? int.MaxValue));
+    }
+
+    return disabledRanges;
+}
+
+[GeneratedRegex(@"don't\(\)")]
+internal static partial Regex DontRegex();
+[GeneratedRegex(@"do\(\)")]
+private static partial Regex DoRegex();
+```
+
+</CodeBox>

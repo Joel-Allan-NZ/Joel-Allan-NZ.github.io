@@ -8,6 +8,8 @@ puzz: 1
 
 This is a nice straight-forward start to the year's AOC puzzles - sorting two lists and totalling the differences between values at each index.
 
+<CodeBox names="typescript|C#">
+
 ```js
 function partOne(input: string[]): number | string {
   const left: number[] = []
@@ -26,12 +28,34 @@ function partOne(input: string[]): number | string {
 }
 ```
 
+```csharp
+public override object PartOne()
+{
+    List<int> left = [];
+    List<int> right = [];
+    foreach (var line in Input)
+    {
+        var split = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        left.Add(int.Parse(split[0]));
+        right.Add(int.Parse(split[1]));
+    }
+    left.Sort();
+    right.Sort();
+
+    return Enumerable.Range(0, left.Count).Sum(x => Math.Abs(left[x] - right[x]));
+}
+```
+
+</CodeBox>
+
 ## Part Two
 
 Equally as straight-forward, we just need to total each number in the left list, multiplied by how many times that respective number appears in the right list.
 
-<br />I used a `Map` rather than repeatedly iterating over the second list for obvious
-performance reasons.
+<br />I used a `Map` rather than repeatedly iterating over the second list for
+obvious performance reasons.
+
+<CodeBox names="typescript|C#">
 
 ```ts
 function partTwo(input: string[]): number | string {
@@ -50,3 +74,21 @@ function partTwo(input: string[]): number | string {
   )
 }
 ```
+
+```csharp
+public override object PartTwo()
+{
+    List<int> left = [];
+    Dictionary<int, int> occurences = [];
+    foreach (var line in Input)
+    {
+        var split = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        left.Add(int.Parse(split[0]));
+        occurences.IncrementOrAddKey(int.Parse(split[1]));
+    }
+
+    return left.Sum(x => occurences.TryGetValue(x, out int count) ? x * count : 0);
+}
+```
+
+</CodeBox>
