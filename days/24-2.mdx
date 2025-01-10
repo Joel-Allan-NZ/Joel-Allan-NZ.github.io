@@ -4,19 +4,21 @@ year: 2024
 puzz: 2
 ---
 
+# 2024 Day 2 - Red-Nosed Reports
+
 ## Part One
 
-Another simple problem to warm us up. We must count all lines in the input such that there's a monotonic increase (or decrease) beween values on that line,
+Another simple problem to warm us up. We must count all lines in the input where there's a monotonic increase (or decrease) beween values on that line,
 and no consecutive values on the line have a difference greater than 3.
 
-<br />
-I chose to approach it by considering each number but the last, and comparing them
-to the number at the next index, discovering if we're increasing or decreasing from
+I chose to approach it by considering each number but the last - comparing each number
+to the following number, and discovering if we're increasing or decreasing from
 the first pair of values.
+
 <br />
 There is a cost to this (we need to check equality between the paired values), but
-a more efficient solution doesn't leap to mind. At least `Array.prototype.every()`
-stops evaluating as soon as it resolves a failure.
+a cleaner solution doesn't leap to mind. JavaScript's `Array.prototype.every()` and
+C#'s `Linq.Enumerable.All()` both stop evaluating as soon as they resolve a failure.
 
 <CodeBox names="typescript|C#">
 
@@ -118,3 +120,5 @@ private static bool AreLevelsSafeWithDampener(List<int> levels)
 ```
 
 </CodeBox>
+
+<TryYourself year="2024" puzz="2" />

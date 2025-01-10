@@ -1,13 +1,17 @@
 import React from 'react'
 import { MDXProvider } from '@mdx-js/react'
 import CodeBox from './CodeBox'
+import TryYourself from './TryYourself'
+import AdventSideNav from './AdventSideNav'
 
-const shortcodes = { CodeBox }
+const shortcodes = { CodeBox, TryYourself }
 
-export default function Layout({ children }) {
+export default function Layout({ children }: { children: any }) {
   return (
-    <div style={{ margin: `0 auto`, maxWidth: `70%`, padding: `0 1rem` }}>
-      <MDXProvider components={shortcodes}>{children}</MDXProvider>
-    </div>
+    <AdventSideNav>
+      <div className="max-w-[70%] ml-[10%]">
+        <MDXProvider components={shortcodes}>{children}</MDXProvider>
+      </div>
+    </AdventSideNav>
   )
 }

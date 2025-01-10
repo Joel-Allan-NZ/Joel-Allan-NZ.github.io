@@ -4,6 +4,8 @@ year: 2024
 puzz: 1
 ---
 
+# 2024 Day 1 - Historian Hysteria
+
 ## Part One
 
 This is a nice straight-forward start to the year's AOC puzzles - sorting two lists and totalling the differences between values at each index.
@@ -52,8 +54,9 @@ public override object PartOne()
 
 Equally as straight-forward, we just need to total each number in the left list, multiplied by how many times that respective number appears in the right list.
 
-<br />I used a `Map` rather than repeatedly iterating over the second list for
-obvious performance reasons.
+<br />I chose to use a Map/Dictionary rather than repeatedly iterating over the
+second list purely for performance reasons over an abritrarily long list. Not at
+all relevant for today's puzzle, but old habits die hard.
 
 <CodeBox names="typescript|C#">
 
@@ -92,3 +95,5 @@ public override object PartTwo()
 ```
 
 </CodeBox>
+
+<TryYourself year="2024" puzz="1" />

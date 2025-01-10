@@ -4,9 +4,11 @@ year: 2024
 puzz: 4
 ---
 
+# 2024 Day 4 - Ceres Search
+
 ## Part One
 
-Another day revolving around text searching!
+Another day revolving around text searching! Luckily it's a wordsearch rather than just more piles of regex.
 
 <br />
 I opted not to try to get too clever with this one, instead using basic regexp and
@@ -14,8 +16,13 @@ a single diagonal search (left-to-right, top-to-bottom) to count half of the pos
 _XMAS_/_SMAX_ matches, then repeating that process on a version of the input that
 had been rotated 90 degrees clockwise.
 <br />
+The C# version uses a slightly different regexp with a positive lookahead to smoosh
+the search for _XMAS/SMAX_ into a single expression, but I opted to keep it as two
+seperate searches in typescript, favouring the simpler readability.
+<br />
 I'm certainly not in love with the way prettier has arranged the parentheses within
 `countDiagonal()`, but hopefully it's still reasonably legible here.
+
 <CodeBox names="typescript|C#">
 
 ```js
@@ -66,39 +73,39 @@ public override object PartOne()
                           .Select(i => new string(Input.Select(x => x[^i]).ToArray()))
                           .ToArray();
 
-  var count = Input.Sum(line => XmasRegex().Matches(line).Count + SamxRegex().Matches(line).Count);
-  count += rotated.Sum(line => XmasRegex().Matches(line).Count + SamxRegex().Matches(line).Count);
+  List<string[]> searchSpaces = [Input, rotated];
+  return searchSpaces.Sum(s => countMatches(s));
 
-  count += LeftToRightDownDiagonal(Input);
-  count += LeftToRightDownDiagonal(rotated);
-
-  return count;
+  static int countMatches(string[] s)
+  {
+      var straightLine = s.Sum(line => XmasRegex().Matches(line).Count);
+      return straightLine + LeftToRightDownDiagonal(s);
+  }
 }
+
 private static int LeftToRightDownDiagonal(string[] input)
 {
-    int[] range = [0, 1, 2, 3];
-    var xmas = "XMAS";
-    int count = 0;
+  int[] range = [0, 1, 2, 3];
+  var xmas = "XMAS";
+  int count = 0;
 
-    for (int y = 0; y < input.Length - 3; y++)
-    {
-        for (int x = 0; x < input[y].Length - 3; x++)
-            if (IsMatchStartPoint(x, y))
-                count++;
-    }
-    return count;
+  for (int y = 0; y < input.Length - 3; y++)
+  {
+      for (int x = 0; x < input[y].Length - 3; x++)
+          if (IsMatchStartPoint(x, y))
+              count++;
+  }
+  return count;
 
-    bool IsMatchStartPoint(int x, int y)
-    {
-        return range.All(offset => input[y + offset][x + offset] == xmas[offset]) ||
-            range.All(offset => input[y + offset][x + offset] == xmas[^(offset + 1)]);
-    }
+  bool IsMatchStartPoint(int x, int y)
+  {
+      return range.All(offset => input[y + offset][x + offset] == xmas[offset]) ||
+          range.All(offset => input[y + offset][x + offset] == xmas[^(offset + 1)]);
+  }
 }
-[GeneratedRegex(@"XMAS")]
-internal static partial Regex XmasRegex();
 
-[GeneratedRegex(@"SAMX")]
-internal static partial Regex SamxRegex();
+[GeneratedRegex(@"(?=(XMAS|SAMX))")]
+internal static partial Regex XmasRegex();
 ```
 
 </CodeBox>
@@ -111,14 +118,15 @@ A rarity where the second part is less fiddly than the first!
 
 - A central 'A'
 - Two 'M's, and two 'S's in the corners (ie on diagonals to the central 'A')
-- The 'M' and 'S' must be on opposite sides of the central 'A'. If we have two 'M's and two 'S's, then as long as one set of 'M' and 'S' are opposite, the other must also be.
-  {' '}
-  <br />
-  From there it's simply a matter of checking 'A' values in valid locations, and
-  confirming they have the correct corners around them.
-  <br />
+- The 'M' and 'S' must be on opposite sides of the central 'A'; 'MAM' or 'SAS' are no good. If our other conditions are already true, we only need to check one 'SAM'/'MAS'
+
+<br />
+From there it's simply a matter of checking 'A' values in valid locations, and confirming
+they have the correct corners around them.
+<br />
 Once again prettier is not terribly helpful at making nested `Array.prototype.reduce()`
 legible outside of the editor itself, but hopefully this is readable enough!
+
 <CodeBox names="typescript|C#">
 
 ```js
@@ -157,35 +165,32 @@ function isACross(input: string[], y: number, x: number): boolean {
 ```csharp
 public override object PartTwo()
 {
-    int count = 0;
-    for (int y = 1; y < Input.Length - 1; y++)
-    {
-        for (int x = 1; x < Input[y].Length - 1; x++)
-        {
-            if (Input[y][x] == 'A' && IsACross(y, x))
-                count++;
-        }
-    }
-    return count;
+  int count = 0;
+  for (int y = 1; y < Input.Length - 1; y++)
+  {
+      for (int x = 1; x < Input[y].Length - 1; x++)
+      {
+          if (Input[y][x] == 'A' && IsACross(y, x))
+              count++;
+      }
+  }
+  return count;
 }
 private bool IsACross(int x, int y)
 {
-    List<char> corners =
-    [
-        Input[x - 1][y - 1],
-        Input[x + 1][y - 1],
-        Input[x - 1][y + 1],
-        Input[x + 1][y + 1]
-    ];
-
-    if (corners.Count(x => x == 'M') == 2 && corners.Count(x => x == 'S') == 2)
-    {
-        if (corners[0] != corners[3])
-            return true;
-    }
-
-    return false;
+  List<char> corners =
+  [
+      Input[x - 1][y - 1],
+      Input[x + 1][y - 1],
+      Input[x - 1][y + 1],
+      Input[x + 1][y + 1]
+  ];
+  return corners[0] != corners[3]
+      && corners.Count(x => x == 'M') == 2
+      && corners.Count(x => x == 'S') == 2;
 }
 ```
 
 </CodeBox>
+
+<TryYourself year="2024" puzz="4" />

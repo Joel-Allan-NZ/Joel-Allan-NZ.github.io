@@ -13,8 +13,15 @@
 @layer base {
   h1 {
     @apply text-2xl;
+    @apply mb-1;
   }
   h2 {
     @apply text-xl;
+    @apply mb-1;
+  }
+  ul {
+    @apply list-disc;
+    @apply ml-5;
+    @apply mt-2;
   }
 }
