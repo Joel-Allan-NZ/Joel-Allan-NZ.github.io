@@ -1,0 +1,147 @@
+---
+slug: 'advent-of-code/2024/7'
+year: 2024
+puzz: 7
+---
+
+# 2024 Day 7 - Bridge Repair
+
+## Part One
+
+Time for some simple recursion. Nothing much to talk about here, we simply check the possible options for resolving the equation with a DFS, pruning invalid paths as we go.
+
+<CodeBox names="typescript|C#">
+
+```js
+export function partOne(input: string[]): number | string {
+  const parsed = parse(input)
+
+  return parsed.reduce(
+    (total, current) =>
+      canBeValid(current[0], current[1], current.slice(2), 0)
+        ? total + current[0]
+        : total,
+    0
+  )
+}
+
+function parse(input: string[]): number[][] {
+  return input.map((line) => line.split(/\ \:|\ /).map((val) => parseInt(val)))
+}
+
+function canBeValid(
+  target: number,
+  total: number,
+  values: number[],
+  index: number
+): boolean {
+  if (index == values.length) return total == target
+  if (total > target) return false
+
+  return (
+    canBeValid(target, total * values[index], values, index + 1) ||
+    canBeValid(target, total + values[index], values, index + 1)
+  )
+}
+```
+
+```csharp
+public override object PartOne()
+{
+    var parsed = Parse();
+
+    return parsed.Sum(line => CanBeValid(line[0], line[1], line[2..], 0) ? line.First() : 0);
+}
+
+private IEnumerable<List<long>> Parse() => Input.Select(x => x.Split([' ', ':'], StringSplitOptions.RemoveEmptyEntries)
+                        .Select(x => long.Parse(x))
+                        .ToList());
+
+private static bool CanBeValid(long target, long total, List<long> values, int index)
+{
+    if (index == values.Count)
+        return total == target;
+
+    if (total > target)
+        return false;
+
+    return CanBeValid(target, total * values[index], values, index + 1) ||
+        CanBeValid(target, total + values[index], values, index + 1);
+}
+```
+
+</CodeBox>
+
+## Part Two
+
+The exact same problem, but with a third operator added to the mix. I opted to explicitly code the operators in a new function rather than altering the original - passing in a collection of operators and iterating over that collection requires a _lot_ of iterators to be generated with the expected performance hits that entails.
+
+<br />
+My two function approach makes for slightly less reusable code, but almost halves
+the C# solution time on my machine. As the code will never actually be used again,
+I opted for performance over reusability.
+
+<CodeBox names="typescript|C#">
+
+```js
+export function partTwo(input: string[]): number | string {
+  const parsed = parse(input)
+
+  return parsed.reduce(
+    (total, current) =>
+      canBeValidWithConcat(current[0], current[1], current.slice(2), 0)
+        ? total + current[0]
+        : total,
+    0
+  )
+}
+
+function canBeValidWithConcat(
+  target: number,
+  total: number,
+  values: number[],
+  index: number
+): boolean {
+  if (index == values.length) return total == target
+  if (total > target) return false
+
+  return (
+    canBeValidWithConcat(target, total * values[index], values, index + 1) ||
+    canBeValidWithConcat(target, total + values[index], values, index + 1) ||
+    canBeValidWithConcat(
+      target,
+      parseInt(total.toString() + values[index]),
+      values,
+      index + 1
+    )
+  )
+}
+```
+
+```csharp
+public override object PartTwo()
+{
+    var parsed = Parse();
+
+    return parsed.Sum(line => CanBeValidWithConcat(line[0], line[1], line[2..], 0) ? line.First() : 0);
+}
+
+
+private static bool CanBeValidWithConcat(long target, long total, List<long> values, int index)
+{
+    if (index == values.Count)
+        return total == target;
+
+    if (total > target)
+        return false;
+
+    return CanBeValidWithConcat(target, total * values[index], values, index + 1) ||
+        CanBeValidWithConcat(target, total + values[index], values, index + 1) ||
+        CanBeValidWithConcat(target, long.Parse(total.ToString() + values[index].ToString()), values, index + 1);
+}
+
+```
+
+</CodeBox>
+
+<TryYourself year="2024" puzz="7" />

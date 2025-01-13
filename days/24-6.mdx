@@ -274,7 +274,7 @@ at each point in the map, but I made two small optimizations:
 1. We only consider adding obstacles to the points in the guard's path from part one - recalculating the path is much cheaper than testing every position.
 2. We use a reverse lookup table to efficiently find the next obstacle
 
-The original bruteforce solution took a few seconds to run. The improved solution is fast enough to feel instant on my machine.
+The original bruteforce solution took a few seconds to run, before applying those basic optimizations. I considered reworking the solution to a model based on edges rather than coordinates (ie each obstacle has a node on each of its four sides that are in the valid area, and those nodes each have a single outgoing edge to the next obstacle the guard would reach), but further optimization seemed unnecessary; it's already effectively instant on my machine.
 
 <CodeBox names="typescript|C#">
 
