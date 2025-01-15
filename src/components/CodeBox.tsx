@@ -8,10 +8,10 @@ export default function CodeBox({ boxName, names, children }) {
       {names ? (
         <>
           <div>
-            {names.split('|').map((name, index) => (
+            {names.split('|').map((name: string, index: number) => (
               <button
                 key={`codetoggle${boxName ?? 0}${name}${index}`}
-                className={`' rounded-b-lg p-2 ml-2 min-w-20 ${
+                className={`rounded-b-lg p-2 ml-2 min-w-20 ${
                   activeTab == index ? 'bg-white' : 'bg-codetoggle text-white'
                 } transition duration-1000 ease-in-out delay-100 hover:scale-105 hover:bg-white hover:text-black`}
                 onClick={() => {

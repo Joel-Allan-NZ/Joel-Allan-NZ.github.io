@@ -17,7 +17,7 @@ const components = {
           <pre className={className} style={style}>
             {tokens.map((line, i) => (
               <div {...getLineProps({ line, key: i })}>
-                <div className="table-row" key={i} {...getLineProps(line, i)}>
+                <div className="ml-4 table-row" key={`code line ${i}`}>
                   <div className="table-cell text-right opacity-50 pr-4 select-none">
                     {`${i + 1}`.padStart(3, ' ')}
                   </div>
