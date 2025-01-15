@@ -1,7 +1,6 @@
 import './src/styles/global.css'
 import React from 'react'
 import { MDXProvider } from '@mdx-js/react'
-import styled from 'styled-components'
 import { Highlight, Prism, themes } from 'prism-react-renderer'
 ;(typeof global !== 'undefined' ? global : window).Prism = Prism
 require('prismjs/components/prism-csharp')
@@ -12,36 +11,22 @@ const components = {
     const code = props.children.props.children.trim()
     const language = className.replace(/language-/, '')
 
-    const Line = styled.div`
-      display: table-row;
-    `
-
-    const LineNo = styled.span`
-      display: table-cell;
-      text-align: right;
-      padding-right: 1em;
-      user-select: none;
-      opacity: 0.5;
-    `
-
-    const LineContent = styled.span`
-      display: table-cell;
-    `
-
     return (
       <Highlight code={code} language={language} theme={themes.nightOwl}>
         {({ className, style, tokens, getLineProps, getTokenProps }) => (
           <pre className={className} style={style}>
             {tokens.map((line, i) => (
               <div {...getLineProps({ line, key: i })}>
-                <Line key={i} {...getLineProps(line, i)}>
-                  <LineNo>{i + 1}</LineNo>
-                  <LineContent>
+                <div className="table-row" key={i} {...getLineProps(line, i)}>
+                  <div className="table-cell text-right opacity-50 pr-4 select-none">
+                    {`${i + 1}`.padStart(3, ' ')}
+                  </div>
+                  <span className="table-cell">
                     {line.map((token, key) => (
                       <span key={key} {...getTokenProps({ token, key })} />
                     ))}
-                  </LineContent>
-                </Line>
+                  </span>
+                </div>
               </div>
             ))}
           </pre>
