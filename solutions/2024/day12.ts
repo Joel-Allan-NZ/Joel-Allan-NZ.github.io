@@ -77,10 +77,6 @@ function countNodeVertices(node: Node): number {
     return node.Edges.slice(index + 1).map((e) => [edge, e])
   })
 
-  // node.Edges.forEach((edge) => console.log(edge))
-
-  // console.log(edgeCombinations)
-
   let outsideCorner = true
   const pairSum = edgeCombinations.reduce((total, pair) => {
     if (
@@ -95,7 +91,5 @@ function countNodeVertices(node: Node): number {
     }
     return total
   }, 0)
-  // console.log(`${pairSum} , pairsum`)
-
   return outsideCorner ? pairSum + 1 : pairSum
 }

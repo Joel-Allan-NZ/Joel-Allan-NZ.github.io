@@ -57,7 +57,7 @@ export function partTwo(input: string[]): number | string {
   while (true) {
     steps++
     robots.forEach((robot) => updateRobotPosition(robot, 1, xSize, ySize))
-    if (hasContiguousRowOfSize(robots, 18)) return steps
+    if (hasContiguousRowOfSize(robots, 24)) return steps
   }
 }
 

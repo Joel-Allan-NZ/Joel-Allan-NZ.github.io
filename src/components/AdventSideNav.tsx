@@ -9,7 +9,6 @@ export default function AdventSideNav({ children }: { children: any }) {
         nodes {
           id
           frontmatter {
-            slug
             year
             puzz
           }
@@ -42,7 +41,9 @@ export default function AdventSideNav({ children }: { children: any }) {
   return (
     <div>
       <nav className="float-left max-h-1vh w-[10%] flex-col">
-        <h4 className="ml-1">Advent of Code Years</h4>
+        <h4 className="ml-1">
+          <a href="/advent-of-code">Advent of Code</a>
+        </h4>
         <div className="relative block w-full ">
           {expanded.map((expandedYear, index) => {
             return (
