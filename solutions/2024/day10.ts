@@ -9,23 +9,6 @@ export function partOne(input: string[]): number | string {
       total + findNines(trails, head, new Map<number, Set<number>>()),
     0
   )
-  // const nines = new Map<number, Set<number>>()
-  // const toVisit: Node[] = [head]
-
-  // while (toVisit.length > 0) {
-  //   const c = toVisit.shift()
-
-  //   //   c!.edges.forEach((edge) => {
-  //   //     const node = trails[edge[0]][edge[1]]
-  //   //     if (node.value == 9) {
-  //   //       if (!nines.has(node.y)) nines.set(node.y, new Set<number>([node.x]))
-  //   //       else nines.get(node.y)?.add(node.x)
-  //   //     } else toVisit.push(node)
-  //   //   })
-  //   // }
-
-  //   // return total + nines.keys().reduce((t, y) => nines.get(y)!.size + t, 0)
-  // }, 0)
 }
 
 function findNines(

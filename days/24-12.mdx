@@ -1,0 +1,271 @@
+---
+slug: 'advent-of-code/2024/12'
+year: 2024
+puzz: 12
+---
+
+# 2024 Day 12 - Garden Groups
+
+## Part One
+
+The first part was pretty straight-forward:
+
+1. Read the input and divide it up into the various garden regions.
+2. Count the total perimeter of each region (in my case by counting the number of sides without a neighbour for every node in the region), and multiply it by the area of the region (the number of elements within that region)
+
+Almost all of the code is just to read and model that data
+
+<CodeBox boxname="one" names="typescript|C#">
+
+```js
+export function partOne(input: string[]): number | string {
+  var regions = parse(input)
+  return regions
+    .values()
+    .reduce(
+      (total, current) =>
+        total +
+        current.length * current.reduce((t, c) => t + 4 - c.Edges.length, 0),
+      0
+    )
+}
+
+interface Node {
+  X: number
+  Y: number
+  C: string
+  Region: number
+  Edges: Node[]
+}
+
+function parse(input: string[]): Map<number, Node[]> {
+  const nodes: Node[] = []
+  let lastRow: Node[] = []
+  input.forEach((line, y) => {
+    const currentRow: Node[] = []
+    line.split('').forEach((c, x) => {
+      currentRow.push({ X: x, Y: y, C: c, Region: 0, Edges: [] })
+      nodes.push(currentRow[x])
+      if (x > 0 && currentRow[x - 1].C == c) {
+        currentRow[x - 1].Edges.push(currentRow[x])
+        currentRow[x].Edges.push(currentRow[x - 1])
+      }
+      if (y > 0 && lastRow[x].C == c) {
+        currentRow[x].Edges.push(lastRow[x])
+        lastRow[x].Edges.push(currentRow[x])
+      }
+    })
+    lastRow = currentRow
+  })
+
+  let region = 1
+  nodes.forEach((node) => {
+    if (node.Region == 0) {
+      node.Region = region
+      region++
+      findRegion(node)
+    }
+  })
+  return Map.groupBy(nodes, (node) => node.Region)
+}
+
+function findRegion(node: Node) {
+  node.Edges.forEach((neighbour) => {
+    if (neighbour.Region == 0) {
+      neighbour.Region = node.Region
+      findRegion(neighbour)
+    }
+  })
+}
+```
+
+```csharp
+public override object PartOne()
+{
+    var regions = Parse();
+
+    return regions.Values.Sum(region => region.Count * region.Sum(FindTotalPerimeter()));
+
+    static Func<NodeData, int> FindTotalPerimeter() => y => 4 - y.Edges.Count;
+}
+
+internal class NodeData(int x, int y, char c, int region)
+{
+    internal int X = x;
+    internal int Y = y;
+    internal char C = c;
+    internal int Region = region;
+    internal List<NodeData> Edges = [];
+}
+
+private Dictionary<int, List<NodeData>> Parse()
+{
+    Dictionary<(int x, int y), NodeData> graph = [];
+    for (int y = 0; y < Input.Length; y++)
+    {
+        for (int x = 0; x < Input.Length; x++)
+        {
+            NodeData n = new(x, y, Input[y][x], 0);
+            if (graph.TryGetValue((x - 1, y), out var left) && left.C == n.C)
+            {
+                left.Edges.Add(n);
+                n.Edges.Add(left);
+            }
+            if (graph.TryGetValue((x, y - 1), out var up) && up.C == n.C)
+            {
+                up.Edges.Add(n);
+                n.Edges.Add(up);
+            }
+            graph.Add((x, y), n);
+        }
+    }
+
+    int region = 1;
+    foreach (var node in graph.Values)
+    {
+        if (node.Region == 0)
+        {
+            node.Region = region;
+            region++;
+            FindRegion(node);
+        }
+    }
+    return graph.Values.GroupBy(x => x.Region).ToDictionary(key => key.Key, value => value.ToList());
+}
+
+private static void FindRegion(NodeData node)
+{
+    foreach (var neighbour in node.Edges)
+    {
+        if (neighbour.Region == 0)
+        {
+            neighbour.Region = node.Region;
+            FindRegion(neighbour);
+        }
+    }
+}
+```
+
+</CodeBox>
+
+## Part Two
+
+This one took a little more thinking.
+
+<br />
+My approach is based on counting the number of vertices a region has - a polygon
+has the same number of sides as vertices, and it seemed more straight-forward.
+<br />
+The algorithm works by counting the corners on each node in a region as such:
+
+- If the node has 0 edges, it has 4 corners (ie it's a single node region). 4 corners = 4 sides.
+- If the node has 1 edge, it has two corners. This can be a little tricky to visualize, but consider a chunky **T**. It has 3 pairs of 2 corners, and a 1 edge node looks much the same.
+- If it has 2 or more edges, it can represent an internal corner (think **E**; there are internal corners on each tine), or a 90 degree angle external corner (or even both).
+  <ul>
+    <li>
+      We can check if it's an external corner by seeing if it has two direct
+      neighbours in either the horizontal or vertical planes. If it has them, we
+      can confirm it's not that kind of corner.
+    </li>
+    <li>
+      The internal corner is slightly trickier \- we check if any two of its
+      neighbours also _share_ a neighbour with each other. Consider a 2x2 square
+      \- for any given node each pair of neighbours also shares another
+      neighbour that the original node doesn't have; it's in a diagonal position
+      to the original node. If that diagonal node doesn't exist in the region,
+      it's an internal corner.
+    </li>
+  </ul>
+- Count 'em up, and multiply by the number of values in that region, and you have your region fence price.
+
+  <br />
+  It's not a terribly elegant approach, but it does the job very well.
+
+<CodeBox boxname="two" names="typescript|C#">
+
+```js
+export function partTwo(input: string[]): number | string {
+  var regions = parse(input)
+
+  return regions.values().reduce((total, region) => {
+    return (
+      total +
+      region.reduce((t, node) => t + region.length * countNodeVertices(node), 0)
+    )
+  }, 0)
+}
+
+function countNodeVertices(node: Node): number {
+  if (node.Edges.length == 0) return 4
+  if (node.Edges.length == 1) return 2
+
+  const edgeCombinations = node.Edges.slice(0, -1).flatMap((edge, index) => {
+    return node.Edges.slice(index + 1).map((e) => [edge, e])
+  })
+
+  let outsideCorner = true
+  const pairSum = edgeCombinations.reduce((total, pair) => {
+    if (
+      (pair[0].X == pair[1].X && pair[1].X == node.X) ||
+      (pair[0].Y == pair[1].Y && pair[1].Y == node.Y)
+    )
+      outsideCorner = false
+    else {
+      let insideCorner =
+        pair[0].Edges.filter((e) => pair[1].Edges.includes(e)).length == 1
+      if (insideCorner) return total + 1
+    }
+    return total
+  }, 0)
+  return outsideCorner ? pairSum + 1 : pairSum
+}
+```
+
+```csharp
+public override object PartTwo()
+{
+    var regions = Parse();
+
+    return regions.Values.Sum(region => FindRegionCost(region));
+
+    static int FindRegionCost(List<NodeData> region)
+    {
+        return region.Sum(node => CountNodeVertices(node)) * region.Count;
+    }
+}
+
+private static int CountNodeVertices(NodeData node)
+{
+    if (node.Edges.Count == 0)
+        return 4;
+
+    if (node.Edges.Count == 1)
+        return 2;
+
+    var pairCombinations = node.Edges.UniquePairs();
+    // if the node is within a straight section of nodes, then it can't be an outside corner.
+    bool outsideCorner = true;
+    var pairSum = pairCombinations.Sum(pair =>
+    {
+        if (IsStraightLine(node, pair))
+            outsideCorner = false;
+        else
+        {
+            bool insideCorner = pair[0].Edges.Intersect(pair[1].Edges).Count() == 1;
+            if (insideCorner)
+                return 1;
+        }
+        return 0;
+
+        static bool IsStraightLine(NodeData node, NodeData[] pair)
+        {
+            return (pair[0].X == pair[1].X && pair[0].X == node.X) ||
+            (pair[0].Y == pair[1].Y && pair[0].Y == node.Y);
+        }
+    });
+
+    return outsideCorner ? pairSum + 1 : pairSum;
+}
+```
+
+</CodeBox>

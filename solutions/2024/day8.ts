@@ -36,24 +36,12 @@ function findAntinodes(
 ) {
   let xDiff = a[0] - b[0]
   let yDiff = a[1] - b[1]
-  // let c = [a[0] + xDiff, a[1] + yDiff]
-  // let d = [b[0] - xDiff, b[1] - yDiff]
-
-  // if (d[0] > -1 && d[0] < maxX && d[1] > -1 && d[1] < maxY) {
-  //   if (!antinodes.has(d[0])) antinodes.set(d[0], new Set<number>([d[1]]))
-  //   else antinodes.get(d[0])?.add(d[1])
-  // }
-  // if (c[0] > -1 && c[0] < maxX && c[1] > -1 && c[1] < maxY) {
-  //   if (!antinodes.has(c[0])) antinodes.set(c[0], new Set<number>([c[1]]))
-  //   else antinodes.get(c[0])?.add(c[1])
-  // }
 
   ;[
     [a[0] + xDiff, a[1] + yDiff],
     [b[0] - xDiff, b[1] - yDiff],
   ].forEach((x) => {
     if (x[0] > -1 && x[0] < maxX && x[1] > -1 && x[1] < maxY) {
-      console.log(x)
       if (!antinodes.has(x[0])) antinodes.set(x[0], new Set<number>([x[1]]))
       else antinodes.get(x[0])?.add(x[1])
     }
