@@ -1,34 +1,58 @@
+import { useStaticQuery, graphql } from 'gatsby'
+import { stringify } from 'querystring'
 import React from 'react'
 
 export default function AdventSideNav({ children }: { children: any }) {
-  const [expanded, setExpanded] = React.useState<
-    { year: number; active: boolean; days: number[] }[]
-  >([
-    {
-      year: 2024,
-      active: true,
-      days: [
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-        21, 22, 23, 24, 25,
-      ],
-    },
-    { year: 2023, active: false, days: [1] },
-  ])
+  const data = useStaticQuery(graphql`
+    query {
+      allMdx {
+        nodes {
+          id
+          frontmatter {
+            slug
+            year
+            puzz
+          }
+          internal {
+            contentFilePath
+          }
+        }
+      }
+    }
+  `)
+
+  const parse = (data) => {
+    var m = new Map<string, { year: string; active: boolean; days: string[] }>()
+    data.allMdx.nodes.forEach((node) => {
+      if (m.has(node.frontmatter.year))
+        m.get(node.frontmatter.year)?.days.push(node.frontmatter.puzz)
+      else
+        m.set(node.frontmatter.year, {
+          year: node.frontmatter.year,
+          active: false,
+          days: [node.frontmatter.puzz],
+        })
+    })
+    m.values().forEach((x) => x.days.sort((x, y) => parseInt(x) - parseInt(y)))
+    return [...m.values().toArray()]
+  }
+
+  const [expanded, setExpanded] = React.useState(parse(data))
 
   return (
     <div>
       <nav className="float-left max-h-1vh w-[10%] flex-col">
         <h4 className="ml-1">Advent of Code Years</h4>
         <div className="relative block w-full ">
-          {expanded.map((year, index) => {
+          {expanded.map((expandedYear, index) => {
             return (
-              <div key={`${year.year} collapsible`}>
+              <div key={`${expandedYear.year} collapsible`}>
                 <div className="flex items-center w-full p-0 leading-tight transition-all rounded-lg outline-none transition-colors ease-in-out delay-100 duration-200 hover:bg-blue-50">
                   <button
                     onClick={() =>
                       setExpanded(() => [
                         ...expanded.slice(0, index),
-                        { ...year, active: !year.active },
+                        { ...expandedYear, active: !expandedYear.active },
                         ...expanded.slice(index + 1),
                       ])
                     }
@@ -36,7 +60,7 @@ export default function AdventSideNav({ children }: { children: any }) {
                     className="flex items-center justify-between w-full p-3 font-sans text-xl antialiased font-semibold leading-snug text-left transition-colors border-b-0 select-none border-b-blue-gray-100 text-blue-gray-900 hover:text-blue-gray-900"
                   >
                     <p className="block mr-auto font-sans text-base antialiased font-normal leading-relaxed">
-                      {year.year}
+                      {expandedYear.year}
                     </p>
                     {expanded[index].active ? (
                       <span className="ml-4">
@@ -78,13 +102,15 @@ export default function AdventSideNav({ children }: { children: any }) {
                   </button>
                 </div>
                 <div
-                  className={`transition-all ${year.active ? '' : 'hidden'}`}
+                  className={`transition-all ${
+                    expandedYear.active ? '' : 'hidden'
+                  }`}
                 >
-                  {year.days.map((day) => (
+                  {expandedYear.days.map((day) => (
                     <a
-                      key={`link to ${year.year}/${day}`}
+                      key={`link to ${expandedYear.year}/${day}`}
                       className="ml-3 flex items-center w-full p-1 leading-tight transition ease-in-out delay-50 duration-200 hover:bg-blue-50 hover:translate-x-2"
-                      href={`/advent-of-code/${year.year}/${day}`}
+                      href={`/advent-of-code/${expandedYear.year}/${day}`}
                     >
                       {day}
                     </a>
