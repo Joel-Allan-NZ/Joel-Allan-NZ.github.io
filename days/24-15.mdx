@@ -1,0 +1,429 @@
+---
+year: 2024
+puzz: 15
+---
+
+# 2024 Day 15 - Warehouse Woes
+
+## Part One
+
+Lengthy solutions today! More brevity was possible, but I'm not playing codegolf, and the intent is to be at least moderately readable... the verbosity was difficult to avoid.
+
+<br />
+My part one solution is pretty straightforward: attempt to move in a given direction,
+checking the warehouse in that direction until either encountering an empty space,
+or an obstacle. If we find empty space, great, move all robot and any relevant boxes
+towards that empty space. If we find a wall then do nothing. Repeat until all directions
+are complete, and then return the sum of box GPS values. No fancy algorithms, just
+straight forward modelling.
+
+<CodeBox boxname="one" names="typescript|C#">
+
+```js
+eexport function partOne(input: string[]): number | string {
+  const parsed = parse(input, false)
+  if (!parsed) return 'parse error'
+  const { graph, robot, directions } = parsed
+
+  makeAllMoves(graph, robot, directions, false)
+  return calculateGPSSum(graph, 'O')
+}
+
+interface Node {
+  character: string
+}
+
+interface CoordNode {
+  x: number
+  y: number
+  node: Node
+}
+
+function makeAllMoves(
+  graph: Map<number, Map<number, Node>>,
+  robot: CoordNode,
+  directions: string,
+  wide: boolean
+): void {
+  directions.split('').forEach((direction) => {
+    const toMoveColumns = wide
+      ? findChangingWideNodes(graph, robot, direction)
+      : findChangingNodes(graph, robot, direction)
+
+    if (toMoveColumns.length > 0 && toMoveColumns[0].length > 0) {
+      toMoveColumns.forEach((toMove) => {
+        if (toMove.length > 0) {
+          for (let i = toMove.length - 1; i > 0; i--) {
+            toMove[i].node.character = toMove[i - 1].node.character
+          }
+          if (toMove.length > 1 && toMove[1].node.character == '@') {
+            robot.x = toMove[1].x
+            robot.y = toMove[1].y
+          }
+          toMove[0].node.character = '.'
+          robot.node = graph.get(robot.y)?.get(robot.x)!
+        }
+      })
+    }
+  })
+}
+
+function coordOffset(direction: string): number[] {
+  if (direction == 'v') return [0, 1]
+  if (direction == '^') return [0, -1]
+  if (direction == '<') return [-1, 0]
+  return [1, 0]
+}
+
+function findChangingNodes(
+  graph: Map<number, Map<number, Node>>,
+  robot: CoordNode,
+  direction: string
+): CoordNode[][] {
+  let toMove: CoordNode[] = [robot]
+  const offset = coordOffset(direction)
+  let steps = 1
+  let lastValue = robot.node.character
+
+  while (lastValue != '.') {
+    let nextCoord = {
+      x: robot.x + steps * offset[0],
+      y: robot.y + steps * offset[1],
+    }
+    let nextNode = graph.get(nextCoord.y)?.get(nextCoord.x)!
+    toMove.push({ x: nextCoord.x, y: nextCoord.y, node: nextNode })
+    steps++
+
+    lastValue = nextNode.character
+
+    if (lastValue == '#') {
+      toMove = []
+      break
+    }
+  }
+  return [toMove]
+}
+
+function parse(
+  input: string[],
+  wide: boolean = false
+):
+  | {
+      graph: Map<number, Map<number, Node>>
+      robot: CoordNode
+      directions: string
+    }
+  | undefined {
+  const graph = new Map<number, Map<number, Node>>()
+  const robot = { x: 0, y: 0, node: { character: '_' } }
+
+  for (const [y, line] of input.entries()) {
+    if (line.length == 0)
+      return {
+        graph,
+        robot,
+        directions: input.slice(y + 1).reduce((x, y) => x + y),
+      }
+
+    line.split('').forEach((c, x) => {
+      if (!graph.has(y)) graph.set(y, new Map<number, Node>())
+
+      if (wide) {
+        let first = c == 'O' ? '[' : c
+        let second = first == '[' ? ']' : c == '#' ? '#' : '.'
+        graph.get(y)!.set(x * 2, { character: first })
+        graph.get(y)!.set(x * 2 + 1, { character: second })
+      } else graph.get(y)!.set(x, { character: c })
+
+      if (c === '@') {
+        robot.x = wide ? 2 * x : x
+        robot.y = y
+        robot.node = graph.get(robot.y)!.get(robot.x)!
+      }
+    })
+  }
+}
+
+function calculateGPSSum(
+  graph: Map<number, Map<number, Node>>,
+  match: string
+): number {
+  return graph.keys().reduce((total, key) => {
+    return (
+      total +
+      graph
+        .get(key)!
+        .keys()
+        .reduce(
+          (t, nestedKey) =>
+            graph.get(key)!.get(nestedKey)!.character == match
+              ? t + nestedKey + 100 * key
+              : t,
+          0
+        )
+    )
+  }, 0)
+```
+
+```csharp
+public override object PartOne()
+{
+    var (graph, directions, robot) = Parse();
+
+    foreach (var direction in directions)
+    {
+        List<(int x, int y, Node<char> value)> toMove = FindChangingNodes(graph, robot, direction);
+
+        if (toMove.Count == 0)
+            continue;
+
+        for (int i = toMove.Count - 1; i > 0; i--)
+            toMove[i].value.Value = toMove[i - 1].value.Value;
+
+        toMove[0].value.Value = '.';
+        robot = toMove[1];
+    }
+
+    return graph.Sum(kvp => kvp.Value.Value == 'O' ? kvp.Key.x + 100 * kvp.Key.y : 0);
+}
+
+private static int[] CoordsOffset(char direction) => direction switch
+{
+    'v' => [0, 1],
+    '^' => [0, -1],
+    '<' => [-1, 0],
+    _ => [1, 0],
+};
+
+private (Dictionary<(int x, int y), Node<char>>, string, (int x, int y, Node<char> value)) Parse(bool wide = false)
+{
+    Dictionary<(int x, int y), Node<char>> graph = [];
+    (int x, int y, Node<char> value) robot = (0, 0, new('@'));
+
+    for (int y = 0; y < Input.Length; y++)
+    {
+        if (Input[y].Length == 0)
+            return (graph, Input[(y + 1)..].Aggregate((x, y) => x + y), robot);
+        else
+        {
+            for (int x = 0; x < Input[y].Length; x++)
+            {
+                if (wide)
+                {
+                    char c = Input[y][x] == 'O' ? '[' : Input[y][x];
+                    char d = c == '[' ? ']' : c == '#' ? '#' : '.';
+                    graph[(x * 2, y)] = new(c);
+                    graph[(x * 2 + 1, y)] = new(d);
+                }
+                else
+                    graph[(x, y)] = new(Input[y][x]);
+
+                if (Input[y][x] == '@')
+                {
+                    robot = (wide ? 2 * x : x, y, graph[(wide ? 2 * x : x, y)]);
+                }
+            }
+        }
+    }
+    throw new ArgumentException("Input is missing a line break");
+}
+
+private static List<(int x, int y, Node<char> value)> FindChangingNodes(Dictionary<(int x, int y), Node<char>> graph,
+    (int x, int y, Node<char> value) robot, char direction)
+{
+    List<(int x, int y, Node<char> value)> toMove = [robot];
+
+    int[] offset = CoordsOffset(direction);
+    int steps = 1;
+
+    while (toMove[^1].value.Value != '.')
+    {
+        var nextCoord = (x: robot.x + steps * offset[0], y: robot.y + steps * offset[1]);
+        var nextNode = (nextCoord.x, nextCoord.y, graph[nextCoord]);
+        toMove.Add(nextNode);
+
+        steps++;
+
+
+        if (toMove[^1].value.Value == '#') // no open space in front of current pile, nothing moves.
+            return [];
+    }
+
+    return toMove;
+}
+```
+
+</CodeBox>
+
+## Part Two
+
+The same problem, but double wide! The wider boxes pose an interesting problem, now when moving up or down we need to not only check the column we're moving in, but also any column that a box overlaps with. The actual implementation is pretty straightforward, just a little fiddly to get right.
+
+<br />
+There's not a lot to discuss here, but I kept a few comments in the C# solution to
+hopefully help explain my thought process a little.
+
+<CodeBox boxname="two" names="typescript|C#">
+
+```js
+export function partTwo(input: string[]): number | string {
+  const parsed = parse(input, true)
+  if (!parsed) return 'parse error'
+  const { graph, robot, directions } = parsed
+
+  makeAllMoves(graph, robot, directions, true)
+
+  return calculateGPSSum(graph, '[')
+}
+
+function findChangingWideNodes(
+  graph: Map<number, Map<number, Node>>,
+  robot: CoordNode,
+  direction: string
+): CoordNode[][] {
+  if (direction == '<' || direction == '>')
+    return findChangingNodes(graph, robot, direction)
+
+  const toMove = new Map<number, CoordNode[]>()
+  toMove.set(robot.x, [robot])
+  const offset = coordOffset(direction)
+  while (true) {
+    const { isLastRow: lastRow, nodes: row } = findNextRow(
+      graph,
+      toMove,
+      offset
+    )
+
+    row.forEach((node) => {
+      if (toMove.has(node.x)) toMove.get(node.x)!.push(node)
+      else toMove.set(node.x, [node])
+    })
+
+    if (row.length == 0) return []
+    else if (lastRow) return [...toMove.values().toArray()]
+  }
+}
+
+function findNextRow(
+  graph: Map<number, Map<number, Node>>,
+  toMove: Map<number, CoordNode[]>,
+  offset: number[]
+): { isLastRow: boolean; nodes: CoordNode[] } {
+  let nodes: CoordNode[] = []
+  let isLastRow = true
+  let filtered = toMove
+    .values()
+    .filter((m) => m[m.length - 1].node.character != '.')
+
+  for (let column of filtered) {
+    const { x, y } = column[column.length - 1]
+    let nextNode = graph.get(y + offset[1])?.get(x)!
+    nodes.push({ x, y: y + offset[1], node: nextNode })
+
+    if (nextNode.character == '#') return { isLastRow: false, nodes: [] }
+
+    if (nextNode.character != '.') {
+      isLastRow = false
+      let xOffset = nextNode.character == ']' ? x - 1 : x + 1
+      let offsetValue = graph.get(y + offset[1])?.get(xOffset)!
+
+      nodes.push({ x: xOffset, y: y + offset[1], node: offsetValue })
+    }
+  }
+  return { isLastRow, nodes }
+}
+
+```
+
+```csharp
+public override object PartTwo()
+{
+    var (graph, directions, robot) = Parse(true);
+
+    foreach (var direction in directions)
+    {
+        var toMoveColumns = FindChangingWideNodes(graph, robot, direction);
+
+        if (toMoveColumns.Count == 0 || toMoveColumns[0].Count == 0)
+            continue;
+
+        foreach (var toMove in toMoveColumns)
+        {
+            if (toMove.Count == 0)
+                continue;
+
+            for (int i = toMove.Count - 1; i > 0; i--)
+            {
+                toMove[i].value.Value = toMove[i - 1].value.Value;
+                if (toMove[i].value.Value == '@')
+                    robot = toMove[i];
+            }
+            toMove[0].value.Value = '.';
+        }
+    }
+
+    return graph.Sum(kvp => kvp.Value.Value == '[' ? kvp.Key.x + 100 * kvp.Key.y : 0);
+}
+
+private static List<List<(int x, int y, Node<char> value)>> FindChangingWideNodes(Dictionary<(int x, int y),
+    Node<char>> graph, (int x, int y, Node<char> value) robot, char direction)
+{
+    if (direction == '<' || direction == '>')
+        return [FindChangingNodes(graph, robot, direction)];
+
+    Dictionary<int, List<(int x, int y, Node<char> value)>> toMove = [];
+    toMove[robot.x] = [robot];
+    int[] offset = CoordsOffset(direction);
+    bool isFinalRow = false;
+    while (!isFinalRow)
+    {
+        isFinalRow = FindPotentialFinalRow(graph, toMove, offset, out var row);
+
+        if (row.Count == 0)
+            return [];
+
+        foreach (var node in row)
+            toMove.AddToOrCreateCollection(node.x, node);
+    }
+
+    return toMove.Select(x => x.Value).ToList();
+}
+
+private static bool FindPotentialFinalRow(Dictionary<(int x, int y), Node<char>> graph, Dictionary<int, List<(int x, int y,
+    Node<char> value)>> toMove, int[] offset, out List<(int x, int y, Node<char> value)> row)
+{
+    row = [];
+    bool isFinalRow = true;
+
+    // don't need to continue considering columns that we know have space to move
+    foreach (var column in toMove.Values.Where(x => x[^1].value.Value != '.'))
+    {
+        var (x, y, value) = column[^1];
+
+        var nextNode = graph[(x, y + offset[1])];
+
+        if (nextNode.Value == '#')
+        {
+            // the column can't move, therefore nothing pushing it can move. The current robot movement results in no changes.
+            row = [];
+            return false;
+        }
+
+        row.Add((x, y + offset[1], graph[(x, y + offset[1])]));
+
+        if (nextNode.Value != '.')
+        {
+            isFinalRow = false;
+            // nextNode.Value has to be either '[' or ']', set the xOffset to represent another column to check.
+            var offsetX = nextNode.Value == ']' ? x - 1 : x + 1;
+            var offSetValue = graph[(offsetX, y + offset[1])];
+
+            row.Add((offsetX, y + offset[1], offSetValue));
+        }
+    }
+
+    return isFinalRow;
+}
+```
+
+</CodeBox>
