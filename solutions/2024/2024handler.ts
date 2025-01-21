@@ -13,6 +13,7 @@ import * as day12 from './day12'
 import * as day13 from './day13'
 import * as day14 from './day14'
 import * as day15 from './day15'
+import * as day16 from './day16'
 
 export function partOne(day: string, input: string[]): number | string {
   switch (day) {
@@ -46,6 +47,8 @@ export function partOne(day: string, input: string[]): number | string {
       return day14.partOne(input)
     case '15':
       return day15.partOne(input)
+    case '16':
+      return day16.partOne(input)
     default:
       return `${day} not recognized as a valid year`
   }
@@ -83,6 +86,8 @@ export function partTwo(day: string, input: string[]): number | string {
       return day14.partTwo(input)
     case '15':
       return day15.partTwo(input)
+    case '16':
+      return day16.partTwo(input)
     default:
       return `${day} not recognized as a valid year`
   }
