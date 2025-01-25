@@ -6,12 +6,29 @@ export default function TryYourself({ year, puzz }) {
   const [solution, setSolution] = React.useState<string | number | undefined>(
     undefined
   )
+  const [solving, setSolving] = React.useState(false)
 
   const runPartOne = () => {
-    setSolution(() => partOne(year, puzz, puzzleInput.split(/\r|\n/)))
+    setSolving(true)
+    partOne(year, puzz, puzzleInput.split(/\r|\n/))
+      .then((result) => setSolution(() => result))
+      .catch(() =>
+        setSolution(
+          'Something went wrong! Ensure you have the correct input and try again.'
+        )
+      )
+      .finally(() => setSolving(false))
   }
   const runPartTwo = () => {
-    setSolution(() => partTwo(year, puzz, puzzleInput.split(/\r|\n/)))
+    setSolving(true)
+    partTwo(year, puzz, puzzleInput.split(/\r|\n/))
+      .then((result) => setSolution(() => result))
+      .catch(() =>
+        setSolution(
+          'Something went wrong! Ensure you have the correct input and try again.'
+        )
+      )
+      .finally(() => setSolving(false))
   }
 
   return (
@@ -40,8 +57,13 @@ export default function TryYourself({ year, puzz }) {
           Solve Part Two
         </button>
       </div>
-
-      {solution ? <p>Result: {solution}</p> : <></>}
+      {solving ? (
+        <p>Thinking...</p>
+      ) : solution ? (
+        <p>Result: {solution}</p>
+      ) : (
+        <></>
+      )}
     </div>
   )
 }

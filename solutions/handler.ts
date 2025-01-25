@@ -1,10 +1,10 @@
 import * as y2024 from './2024/2024handler'
 
-export function partOne(
+export async function partOne(
   year: string,
   day: string,
   input: string[]
-): string | number {
+): Promise<string | number> {
   year = year.toString()
   day = day.toString()
 
@@ -16,11 +16,11 @@ export function partOne(
   }
 }
 
-export function partTwo(
+export async function partTwo(
   year: string,
   day: string,
   input: string[]
-): string | number {
+): Promise<string | number> {
   year = year.toString()
   day = day.toString()
 
