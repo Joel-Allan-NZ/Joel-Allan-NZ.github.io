@@ -2,12 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 :root {
-  --deckgo-highlight-code-carbon-header-button-height: 0px;
-  --deckgo-highlight-code-carbon-header-button-width: 0px;
-  --deckgo-highlight-code-carbon-header-button-margin: 0px;
-  --deckgo-highlight-code-carbon-header-button-red-border: #fff;
-  --deckgo-highlight-code-carbon-header-button-yellow-border: #fff;
-  --deckgo-highlight-code-carbon-header-button-green-border: #fff;
 }
 
 @layer base {
