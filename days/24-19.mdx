@@ -1,0 +1,156 @@
+---
+year: 2024
+puzz: 19
+---
+
+# 2024 Day 19 - Linen Layout
+
+## Part One
+
+I'm saying this a frightening number of times (hinting at horrors to come?), but this was nice and straight forward yet again.
+
+<br />
+For each pattern consider each towel it could start with, and then take the sub-pattern
+beginning after that towel. Repeat the process for each of those sub-patterns until
+you have no more sub-pattern left to check (a full match!), or nothing matches with
+the remaining sub-patterns (an invalid pattern).
+<br />
+This should be pretty simple to do recursively, but I opted to use a stack and avoid
+any possible recursive depth problems (not that there should be any).
+
+<CodeBox boxname="one" names="typescript|C#">
+
+```js
+export function partOne(input: string[]): number | string {
+  const towels = input[0].split(/, /)
+  const patterns = input.slice(2)
+
+  return patterns.reduce(
+    (total, pattern) => (canMakePattern(pattern, towels) ? total + 1 : total),
+    0
+  )
+}
+
+function canMakePattern(pattern: string, towels: string[]): boolean {
+  const patterns = []
+  patterns.push(pattern)
+  while (patterns.length > 0) {
+    let currentPattern = patterns.pop()
+
+    for (let towel of towels) {
+      if (currentPattern?.startsWith(towel)) {
+        if (currentPattern.length == towel.length) return true
+
+        patterns.push(currentPattern.slice(towel.length))
+      }
+    }
+  }
+  return false
+}
+```
+
+```csharp
+public override object PartOne()
+{
+    var towels = Input[0].Split([',', ' '], StringSplitOptions.RemoveEmptyEntries);
+    var patterns = Input.Skip(2).ToList();
+
+    return patterns.Sum(pattern => CanMakePattern(pattern, towels) ? 1 : 0);
+}
+
+private static bool CanMakePattern(string pattern, IEnumerable<string> towels)
+{
+    Stack<string> patterns = [];
+    patterns.Push(pattern);
+    while (patterns.Count > 0)
+    {
+        var currentPattern = patterns.Pop();
+
+        foreach (var towel in towels)
+        {
+            if (currentPattern.StartsWith(towel))
+            {
+                if (currentPattern.Length == towel.Length)
+                    return true;
+
+                patterns.Push(currentPattern[towel.Length..]);
+            }
+        }
+    }
+    return false;
+}
+```
+
+</CodeBox>
+
+## Part Two
+
+Quite straight forward again, but the predictably large solution means we can't be horribly inefficient. Some memoization goes a long way.
+
+<br />I surrendered to the evils of recursion for this one, but otherwise my
+approach is very similar to part one: check which towels are a valid beginning
+for the pattern, and for each of them then consider the remaining part of the
+pattern again checking for matching towels at the beginning. The only real
+difference is that I record the number of towel arrangements that exist for each
+of these patterns, and use it to avoid duplicate work. Without that memoization
+this would not be quick at all!
+
+<CodeBox boxname="two" names="typescript|C#">
+
+```js
+export function partTwo(input: string[]): number | string {
+  const towels = input[0].split(/, /)
+  const patterns = input.slice(2)
+  const cache = new Map<string, number>()
+
+  return patterns.reduce(
+    (total, pattern) => total + countValidPatterns(cache, pattern, towels),
+    0
+  )
+}
+
+function countValidPatterns(
+  cache: Map<string, number>,
+  pattern: string,
+  towels: string[]
+): number {
+  if (!pattern || pattern.length == 0) return 1
+  if (cache.has(pattern)) return cache.get(pattern)!
+
+  const prefixMatches = towels.filter((towel) => pattern.startsWith(towel))
+  const matchCount = prefixMatches.reduce(
+    (total, towel) =>
+      total + countValidPatterns(cache, pattern.slice(towel.length), towels),
+    0
+  )
+  cache.set(pattern, matchCount)
+  return matchCount
+}
+```
+
+```csharp
+public override object PartTwo()
+{
+    Dictionary<string, long> uniqueFound = [];
+    var towels = Input[0].Split([',', ' '], StringSplitOptions.RemoveEmptyEntries).ToList();
+    var patterns = Input.Skip(2).ToList();
+
+    return patterns.Sum(x => CountValidPatterns(uniqueFound, x, towels));
+}
+
+private static long CountValidPatterns(Dictionary<string, long> cache, string pattern, IEnumerable<string> towels)
+{
+    if (String.IsNullOrEmpty(pattern))
+        return 1;
+    if (cache.TryGetValue(pattern, out var possibleCount))
+        return possibleCount;
+
+    var towelPrefixMatches = towels.Where(towel => pattern.StartsWith(towel));
+    long matches = towelPrefixMatches.Sum(towel => CountValidPatterns(cache, pattern[towel.Length..], towels));
+
+    cache[pattern] = matches;
+    return matches;
+}
+```
+
+</CodeBox>

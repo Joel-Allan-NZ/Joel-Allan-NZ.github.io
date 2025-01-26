@@ -17,212 +17,157 @@ grid size... which means part 2 will probably be tricksy.
 
 ```js
 export function partOne(input: string[]): number | string {
-  const { state, instructions } = parse(input)
-
-  while (
-    state.instructionPointer > -1 &&
-    state.instructionPointer < instructions.length - 1
-  )
-    operation(
-      instructions[state.instructionPointer],
-      instructions[state.instructionPointer + 1],
-      state
-    )
-
-  return state.output
+  const graph = parse(input)
+  const start = graph.get(0)?.get(0)!
+  const end = graph.get(70)?.get(70)!
+  return findShortestExitDistance(graph, start, end)
 }
 
-interface State {
-  A: number
-  B: number
-  C: number
-  output: string
-  instructionPointer: number
+interface CoordAwareNode {
+  X: number
+  Y: number
+  Value: string
+  Edges: CoordAwareNode[]
 }
 
-function parse(input: string[]): { state: State; instructions: number[] } {
-  const state: State = { A: 0, B: 0, C: 0, output: '', instructionPointer: 0 }
-  state.A = parseInt(input[0].match(/(\d+)/)![0])
-  state.B = parseInt(input[1].match(/(\d+)/)![0])
-  state.C = parseInt(input[2].match(/(\d+)/)![0])
+function parse(input: string[]): Map<number, Map<number, CoordAwareNode>> {
+  const graph = new Map<number, Map<number, CoordAwareNode>>()
 
-  const instructions = input[4]
-    .split(/[\, ]/)
-    .slice(1)
-    .map((x) => parseInt(x))
-  return { state, instructions }
-}
-
-function operation(opCode: number, operand: number, state: State) {
-  switch (opCode) {
-    case 0:
-      adv(comboOperand(operand, state), state)
-      break
-    case 1:
-      bxl(operand, state)
-      break
-    case 2:
-      bst(comboOperand(operand, state), state)
-      break
-    case 3:
-      jnz(operand, state)
-      break
-    case 4:
-      bxc(state)
-      break
-    case 5:
-      out(comboOperand(operand, state), state)
-      break
-    case 6:
-      bdv(comboOperand(operand, state), state)
-      break
-    case 7:
-      cdv(comboOperand(operand, state), state)
+  for (let y = 0; y < 71; y++) {
+    for (let x = 0; x < 71; x++) {
+      const node: CoordAwareNode = { X: x, Y: y, Value: '.', Edges: [] }
+      if (!graph.has(y)) graph.set(y, new Map<number, CoordAwareNode>())
+      graph.get(y)?.set(x, node)
+      const neighbours = [graph.get(y - 1)?.get(x), graph.get(y)?.get(x - 1)]
+      neighbours.forEach((neighbour) => {
+        if (neighbour) {
+          neighbour.Edges.push(node)
+          node.Edges.push(neighbour)
+        }
+      })
+    }
   }
-  if (opCode != 3) state.instructionPointer += 2
-}
-
-function comboOperand(operand: number, state: State): number {
-  switch (operand) {
-    case 4:
-      return state.A
-    case 5:
-      return state.B
-    case 6:
-      return state.C
-    default:
-      return operand
+  for (let i = 0; i < 1024; i++) {
+    let coords = input[i].split(/,/).map((x) => parseInt(x))
+    graph.get(coords[1])!.get(coords[0])!.Value = '#'
   }
+  return graph
 }
 
-function adv(comboOperand: number, state: State) {
-  state.A = Math.floor(state.A / 2 ** comboOperand)
-}
-function bdv(comboOperand: number, state: State) {
-  state.B = Math.floor(state.A / 2 ** comboOperand)
-}
-function cdv(comboOperand: number, state: State) {
-  state.C = Math.floor(state.A / 2 ** comboOperand)
-}
-function bxl(operand: number, state: State) {
-  state.B ^= operand
-}
-function bst(comboOperand: number, state: State) {
-  state.B = comboOperand % 8
-}
-function jnz(operand: number, state: State) {
-  state.instructionPointer =
-    state.A == 0 ? state.instructionPointer + 2 : operand
-}
-function bxc(state: State) {
-  state.B ^= state.C
-}
-function out(comboOperand: number, state: State) {
-  state.output =
-    state.output.length > 0
-      ? `${state.output},${((comboOperand % 8) + 8) % 8}`
-      : `${((comboOperand % 8) + 8) % 8}`
+function findShortestExitDistance(
+  graph: Map<number, Map<number, CoordAwareNode>>,
+  start: CoordAwareNode,
+  end: CoordAwareNode
+): number {
+  const minimumDistances = new Map<CoordAwareNode, number>([
+    [end, 2 ** 31],
+    [start, 0],
+  ])
+  const toExplore = [start]
+
+  while (toExplore.length > 0) {
+    const node = toExplore.shift()!
+    const distance = minimumDistances.get(node)!
+
+    if (node == end) return distance
+
+    const possibleMin = minimumDistances.get(node)
+    if (possibleMin && possibleMin < distance) continue
+
+    node.Edges.forEach((node) => {
+      if (node.Value != '#') {
+        const nodeDistance = minimumDistances.get(node)
+        if (!nodeDistance || nodeDistance > distance + 1) {
+          minimumDistances.set(node, distance + 1)
+          toExplore.push(node)
+        }
+      }
+    })
+  }
+  return minimumDistances.get(end)!
 }
 ```
 
 ```csharp
-long A = 0;
-long B = 0;
-long C = 0;
-string output = "";
-
 public override object PartOne()
 {
-    var instructions = Parse();
-    int instructionPointer = 0;
-    while (instructionPointer >= 0 && instructionPointer < instructions.Count - 1)
+    var graph = Parse();
+    var start = graph[(0, 0)];
+    var end = graph[(70, 70)];
+    return FindShortestExit(graph, start, end);
+}
+
+private static int FindShortestExit(Dictionary<(int x, int y), CoordAwareNode> graph, CoordAwareNode start, CoordAwareNode end)
+{
+    Dictionary<CoordAwareNode, int> minimumDistances = [];
+    minimumDistances[end] = int.MaxValue;
+    minimumDistances[start] = 0;
+
+    Queue<CoordAwareNode> toExplore = [];
+    toExplore.Enqueue(start);
+
+    while (toExplore.Count > 0)
     {
-        Operation(instructions[instructionPointer], instructions[instructionPointer + 1], ref instructionPointer);
+        var node = toExplore.Dequeue();
+        var distance = minimumDistances[node];
+        if (node == end)
+            return minimumDistances[end];
+        if (minimumDistances.TryGetValue(node, out var minimumDistance) && minimumDistance < distance)
+            continue;
+
+        foreach (var edge in node.Edges)
+        {
+            if (edge.Value != '#')
+            {
+                if (minimumDistances.TryGetValue(edge, out var edgeDistance) && edgeDistance <= distance + 1)
+                    continue;
+
+                minimumDistances[edge] = distance + 1;
+                toExplore.Enqueue(edge);
+            }
+        }
     }
-    return output;
+    return minimumDistances[end];
 }
 
-private void Operation(int opCode, int operand, ref int instructionPointer) => instructionPointer = opCode switch
+private Dictionary<(int x, int y), CoordAwareNode> Parse()
 {
-    0 => Adv(ComboOperand(operand), instructionPointer),
-    1 => Bxl(operand, instructionPointer),
-    2 => Bst(ComboOperand(operand), instructionPointer),
-    3 => Jnz(operand, instructionPointer),
-    4 => Bxc(instructionPointer),
-    5 => Out(ComboOperand(operand), instructionPointer),
-    6 => Bdv(ComboOperand(operand), instructionPointer),
-    7 => Cdv(ComboOperand(operand), instructionPointer),
-    _ => throw new ArgumentException($"{opCode} isn't a valid opcode")
-};
+    Dictionary<(int x, int y), CoordAwareNode> graph = [];
 
-private long ComboOperand(int operand) => operand switch
-{
-    4 => A,
-    5 => B,
-    6 => C,
-    _ => operand,
-};
+    for (int y = 0; y < 71; y++)
+    {
+        for (int x = 0; x < 71; x++)
+        {
+            CoordAwareNode node = new(x, y, '.');
+            graph.Add((x, y), node);
+            if (graph.TryGetValue((x - 1, y), out var neighbour))
+            {
+                neighbour.Edges.Add(node);
+                node.Edges.Add(neighbour);
+            }
+            if (graph.TryGetValue((x, y - 1), out neighbour))
+            {
+                neighbour.Edges.Add(node);
+                node.Edges.Add(neighbour);
+            }
+        }
+    }
 
-private List<int> Parse()
-{
-    A = long.Parse(Regex.Match(Input[0], @"[\d]+").Value);
-    B = int.Parse(Regex.Match(Input[1], @"[\d]+").Value);
-    C = int.Parse(Regex.Match(Input[2], @"[\d]+").Value);
+    for (int i = 0; i < 1024; i++)
+    {
+        var byteCoords = Input[i].Split(',').Select(x => int.Parse(x)).ToArray();
+        graph[(byteCoords[1], byteCoords[0])].Value = '#';
+    }
 
-    return Input[4].Split([',', ' '])
-                   .Skip(1)
-                   .Select(x => int.Parse(x))
-                   .ToList();
+    return graph;
 }
 
-private int Adv(long comboOperand, int instructionPointer)
+internal class CoordAwareNode(int x, int y, char c)
 {
-    A = (long)Math.Floor(A / Math.Pow(2, comboOperand));
-    return instructionPointer + 2;
-}
-
-private int Bdv(long comboOperand, int instructionPointer)
-{
-    B = (long)Math.Floor(A / Math.Pow(2, comboOperand));
-    return instructionPointer + 2;
-}
-
-private int Cdv(long comboOperand, int instructionPointer)
-{
-    C = (long)Math.Floor(A / Math.Pow(2, comboOperand));
-    return instructionPointer + 2;
-}
-
-private int Bxl(int operand, int instructionPointer)
-{
-    B ^= operand;
-    return instructionPointer + 2;
-}
-
-private int Bst(long comboOperand, int instructionPointer)
-{
-    B = comboOperand % 8;
-    return instructionPointer + 2;
-}
-
-private int Jnz(int operand, int instructionPointer)
-{
-    if (A == 0)
-        return instructionPointer + 2;
-
-    return operand;
-}
-
-private int Bxc(int instructionPointer)
-{
-    B ^= C;
-    return instructionPointer + 2;
-}
-
-private int Out(long comboOperand, int instructionPointer)
-{
-    output = output.Length > 0 ? $"{output},{comboOperand % 8}" : $"{comboOperand % 8}";
-    return instructionPointer + 2;
+    internal int X = x;
+    internal int Y = y;
+    internal char Value = c;
+    internal List<CoordAwareNode> Edges = [];
 }
 ```
 
@@ -241,100 +186,119 @@ recheck for a valid path when one was modified by a line of the input.
 
 ```js
 export function partTwo(input: string[]): number | string {
-  const { state, instructions } = parse(input)
-  let candidates = new Set<number>([0])
+  const graph = parse(input)
+  const start = graph.get(0)?.get(0)!
+  const end = graph.get(70)?.get(70)!
+  const visitedNodes = new Set<CoordAwareNode>()
 
-  for (let i = 1; i <= instructions.length; i++) {
-    let nextCandidates = new Set<number>()
-    candidates.forEach((candidate) => {
-      nextCandidates = nextCandidates.union(
-        findNextCandidates(candidate, i, state, instructions)
-      )
-    })
-    candidates = nextCandidates
+  for (let i = 1024; i < input.length; i++) {
+    let coords = input[i].split(/,/).map((x) => parseInt(x))
+    graph.get(coords[1])!.get(coords[0])!.Value! = '#'
+
+    if (
+      visitedNodes.size == 0 ||
+      visitedNodes.has(graph.get(coords[1])!.get(coords[0])!)
+    ) {
+      if (!hasPossiblePath(graph, start, end, visitedNodes))
+        return `${coords[0]},${coords[1]}`
+    }
   }
-  return candidates
-    .values()
-    .toArray()
-    .reduce((total, x) => (total < x ? total : x), 2 ** 63)
+  return 'Can still find a path.'
 }
 
-function findNextCandidates(
-  start: number,
-  position: number,
-  state: State,
-  instructions: number[]
-): Set<number> {
-  const candidates = new Set<number>()
-  for (let offset = 0; offset < 8; offset++) {
-    state.output = ''
-    state.instructionPointer = 0
-    state.A = start + offset
+function hasPossiblePath(
+  graph: Map<number, Map<number, CoordAwareNode>>,
+  start: CoordAwareNode,
+  end: CoordAwareNode,
+  visited: Set<CoordAwareNode>
+): boolean {
+  const priority = new Map<number, CoordAwareNode[]>()
+  visited.clear()
+  visited.add(start)
+  addPriorityNode(priority, start)
+  while (priority.size > 0) {
+    let current = getPriorityNode(priority)
+    if (current == end) return true
 
-    while (
-      state.instructionPointer > -1 &&
-      state.instructionPointer < instructions.length - 1
-    ) {
-      operation(
-        instructions[state.instructionPointer],
-        instructions[state.instructionPointer + 1],
-        state
-      )
-    }
-
-    let numberOut = state.output.split(/,/).map((x) => parseInt(x))
-    if (
-      position > 0 &&
-      numberOut[numberOut.length - position] ==
-        instructions[instructions.length - position]
-    ) {
-      candidates.add(
-        position < instructions.length ? (start + offset) * 8 : start + offset
-      )
-    }
+    current.Edges.forEach((neighbour) => {
+      if (neighbour.Value != '#' && !visited.has(neighbour)) {
+        visited.add(neighbour)
+        addPriorityNode(priority, neighbour)
+      }
+    })
   }
-  return candidates
+  return false
+}
+
+function addPriorityNode(
+  priority: Map<number, CoordAwareNode[]>,
+  node: CoordAwareNode
+) {
+  const distance = 140 - node.X - node.Y
+
+  if (!priority.has(distance)) priority.set(distance, [node])
+  else priority.get(distance)?.push(node)
+}
+
+function getPriorityNode(
+  priority: Map<number, CoordAwareNode[]>
+): CoordAwareNode {
+  const smallest = priority
+    .keys()
+    .reduce((min, current) => (min > current ? current : min), 2 ** 31)
+  const toReturn = priority.get(smallest)!.shift()!
+  if (priority.get(smallest)?.length == 0) {
+    priority.delete(smallest)
+  }
+  return toReturn
 }
 ```
 
 ```csharp
 public override object PartTwo()
 {
-    var instructions = Parse();
-    HashSet<long> candidates = [];
-    candidates.Add(0);
+    HashSet<CoordAwareNode> pathNodes = [];
+    var graph = Parse();
+    var start = graph[(0, 0)];
+    var end = graph[(70, 70)];
 
-    for (int i = 1; i <= instructions.Count; i++)
+    for (int i = 1024; i < Input.Length; i++)
     {
-        HashSet<long> nextCandidates = [];
-        foreach (var candidate in candidates)
-            nextCandidates.UnionWith(FindNextCandidates(candidate, i, instructions));
+        var byteCoords = Input[i].Split(',').Select(x => int.Parse(x)).ToArray();
+        graph[(byteCoords[1], byteCoords[0])].Value = '#';
 
-        candidates = nextCandidates;
+        if (pathNodes.Count == 0 || pathNodes.Contains(graph[(byteCoords[1], byteCoords[0])]))
+        {
+            if (!HasPossiblePath(graph, start, end, out pathNodes))
+                return $"{byteCoords[0]},{byteCoords[1]}";
+        }
     }
-    return candidates.Min();
+    return -1;
 }
 
-
-private HashSet<long> FindNextCandidates(long start, int position, List<int> instructions)
+private static bool HasPossiblePath(Dictionary<(int x, int y), CoordAwareNode> graph, CoordAwareNode start, CoordAwareNode end, out HashSet<CoordAwareNode> visited)
 {
-    HashSet<long> candidates = [];
-    for (int offset = 0; offset < 8; offset++)
+    PriorityQueue<CoordAwareNode, int> toVisit = new();
+    visited = [];
+    visited.Add(start);
+    toVisit.Enqueue(start, 0);
+
+    while (toVisit.Count > 0)
     {
-        output = "";
-        int instructionPointer = 0;
-        A = start + offset;
-        while (instructionPointer >= 0 && instructionPointer < instructions.Count - 1)
+        var current = toVisit.Dequeue();
+        if (current == end)
+            return true;
+
+        foreach (var neighbour in current.Edges)
         {
-            Operation(instructions[instructionPointer], instructions[instructionPointer + 1], ref instructionPointer);
+            if (neighbour.Value == '#' || visited.Contains(neighbour))
+                continue;
+
+            visited.Add(neighbour);
+            toVisit.Enqueue(neighbour, 140 - neighbour.X - neighbour.Y);
         }
-
-        var numericOutput = output.Split(',').Select(x => int.Parse(x)).ToArray();
-
-        if (numericOutput[^position] == instructions[^position])
-            candidates.Add(position < instructions.Count ? (start + offset) << 3 : (start + offset));
     }
-    return candidates;
+    return false;
 }
 ```
 

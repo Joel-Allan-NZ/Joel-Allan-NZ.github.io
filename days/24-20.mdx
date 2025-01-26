@@ -1,0 +1,303 @@
+---
+year: 2024
+puzz: 20
+---
+
+# 2024 Day 20 - Race Condition
+
+## Part One
+
+This feels like the 40th <a href="https://en.wikipedia.org/wiki/Breadth-first_search">BFS</a> / budget <a href="https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm">djikstra</a> in only 20 days.
+
+<br />
+My approach here is simple: find the shortest path distance to every node in the
+graph, then look for nodes at most two nodes apart (ie with at most one wall tile
+between them) with a distance between their shortest paths greater than or equal
+to our 100 target. Each of those pairs represents a valid cheat pair, so just count
+'em up.
+
+<CodeBox boxname="one" names="typescript|C#">
+
+```js
+export function partOne(input: string[]): number | string {
+  const { graph, start } = parse(input)
+  findMinimumDistances(graph, start)
+  const distance = 2,
+    target = 100
+  let count = 0
+
+  for (let y = 0; y < graph.length; y++) {
+    for (let x = 0; x < graph[y].length; x++) {
+      if (graph[y][x].value != '#')
+        count += neighboursWithinManhattanDistance(
+          graph,
+          graph[y][x],
+          distance,
+          target
+        )
+    }
+  }
+  return count
+}
+
+interface DistanceAwareNode {
+  value: string
+  distance: number
+  x: number
+  y: number
+}
+
+function parse(input: string[]): {
+  graph: DistanceAwareNode[][]
+  start: DistanceAwareNode
+} {
+  const graph: DistanceAwareNode[][] = []
+  let start: DistanceAwareNode | undefined = undefined
+
+  for (let y = 0; y < input.length; y++) {
+    graph.push([])
+    for (let x = 0; x < input[y].length; x++) {
+      const node = {
+        value: input[y][x],
+        distance: input[y][x] == '#' ? 0 : 2 ** 31,
+        x,
+        y,
+      }
+      graph[y].push(node)
+      if (input[y][x] == 'S') start = node
+    }
+  }
+  return { graph, start: start! }
+}
+
+function findMinimumDistances(
+  graph: DistanceAwareNode[][],
+  start: DistanceAwareNode
+): void {
+  const toExplore: DistanceAwareNode[] = [start]
+  start.distance = 0
+
+  while (toExplore.length > 0) {
+    const current = toExplore.shift()!
+    const neighbours = getNeighbours(graph, current)
+    neighbours.forEach((neighbour) => {
+      if (neighbour.value != '#' && neighbour.distance > current.distance + 1) {
+        toExplore.push(neighbour)
+        neighbour.distance = current.distance + 1
+      }
+    })
+  }
+}
+
+function getNeighbours(graph: DistanceAwareNode[][], node: DistanceAwareNode) {
+  const res: DistanceAwareNode[] = []
+
+  if (node.x < graph[0].length - 1) res.push(graph[node.y][node.x + 1])
+  if (node.x > 0) res.push(graph[node.y][node.x - 1])
+  if (node.y < graph.length - 1) res.push(graph[node.y + 1][node.x])
+  if (node.y > 0) res.push(graph[node.y - 1][node.x])
+
+  return res
+}
+
+function neighboursWithinManhattanDistance(
+  graph: DistanceAwareNode[][],
+  node: DistanceAwareNode,
+  cheatDistance: number,
+  cheatTimeGain: number
+): number {
+  let count = 0
+  const yMin = Math.max(0, node.y - cheatDistance)
+  const yMax = Math.min(graph.length - 1, node.y + cheatDistance)
+
+  for (let y = yMin; y <= yMax; y++) {
+    const remainingManhattanDistance = cheatDistance - Math.abs(node.y - y)
+    const xMin = Math.max(0, node.x - remainingManhattanDistance)
+    const xMax = Math.min(
+      graph[y].length - 1,
+      node.x + remainingManhattanDistance
+    )
+
+    for (let x = xMin; x <= xMax; x++) {
+      const neighbour = graph[y][x]
+      const manhattanDistance = Math.abs(node.x - x) + Math.abs(node.y - y)
+
+      if (
+        neighbour.distance - manhattanDistance - cheatTimeGain >=
+        node.distance
+      )
+        count++
+    }
+  }
+  return count
+}
+```
+
+```csharp
+public override object PartOne()
+{
+    var (grid, start) = Parse();
+    FindMinimumDistances(grid, start);
+    int distance = 2, target = 100;
+    int count = 0;
+
+    for (int y = 0; y < grid.GetLength(0); y++)
+    {
+        for (int x = 0; x < grid.GetLength(1); x++)
+        {
+            if (grid[y, x].Value != '#')
+                count += NeighboursWithinManhattanDistance(grid, grid[y, x], distance, target);
+        }
+    }
+    return count;
+}
+private static int NeighboursWithinManhattanDistance(DistanceAwareNode[,] graph, DistanceAwareNode node, int cheatDistance, int targetSpeedGain)
+{
+    int count = 0;
+    int yMin = Math.Max(0, node.Y - cheatDistance);
+    int yMax = Math.Min(graph.GetLength(0) - 1, node.Y + cheatDistance);
+
+    for (int y = yMin; y <= yMax; y++)
+    {
+        var remainingDistance = cheatDistance - Math.Abs(node.Y - y);
+        int xMin = Math.Max(0, node.X - remainingDistance);
+        int xMax = Math.Min(graph.GetLength(1) - 1, node.X + remainingDistance);
+
+        for (int x = xMin; x <= xMax; x++)
+        {
+            var neighbour = graph[y, x];
+            var manhattanDistance = Math.Abs(node.X - x) + Math.Abs(node.Y - y);
+            if (neighbour.Distance - targetSpeedGain - manhattanDistance >= node.Distance)
+                count++;
+        }
+    }
+    return count;
+}
+
+private static IEnumerable<DistanceAwareNode> GetNeighbours(DistanceAwareNode[,] graph, DistanceAwareNode node)
+{
+    if (node.X < graph.GetLength(1) - 1)
+        yield return graph[node.Y, node.X + 1];
+    if (node.X > 0)
+        yield return graph[node.Y, node.X - 1];
+    if (node.Y > 0)
+        yield return graph[node.Y - 1, node.X];
+    if (node.Y < graph.GetLength(0) - 1)
+        yield return graph[node.Y + 1, node.X];
+}
+
+private static void FindMinimumDistances(DistanceAwareNode[,] graph, DistanceAwareNode start)
+{
+    Queue<DistanceAwareNode> toExplore = [];
+    start.Distance = 0;
+    toExplore.Enqueue(start);
+
+    while (toExplore.Count > 0)
+    {
+        var current = toExplore.Dequeue();
+        foreach (var neighbour in GetNeighbours(graph, current))
+        {
+            if (neighbour.Value == '#' || neighbour.Distance <= current.Distance + 1)
+                continue;
+
+            toExplore.Enqueue(neighbour);
+            neighbour.Distance = current.Distance + 1;
+        }
+    }
+}
+
+private (DistanceAwareNode[,] graph, DistanceAwareNode start) Parse()
+{
+    DistanceAwareNode[,] graph = new DistanceAwareNode[Input.Length, Input[0].Length];
+    DistanceAwareNode? start = null;
+
+    for (int y = 0; y < Input.Length; y++)
+    {
+        for (int x = 0; x < Input[y].Length; x++)
+        {
+            DistanceAwareNode node = new(Input[y][x], x, y);
+            graph[y, x] = node;
+            if (Input[y][x] == 'S')
+                start = node;
+        }
+    }
+    return (graph, start!);
+}
+
+internal class DistanceAwareNode(char c, int x, int y)
+{
+    internal char Value = c;
+    internal int Distance = c == '#' ? 0 : int.MaxValue;
+    internal int X = x;
+    internal int Y = y;
+}
+```
+
+</CodeBox>
+
+## Part Two
+
+I wasted a bit of time here with some confusion (I'm dumb) over the wording!
+
+<br />
+The twenty picoseconds of no collision time is contiguous, and continues whether
+or not the 'car' is still within a 'wall', and *doesn't end* when you leave a wall.
+I mistakenly read it as the cheat terminating as soon as the car left a wall... some
+time wasted there for sure.
+<br />
+My apparently terrible reading comprehension aside, this is the exact same problem
+just on a bigger scope. As I was reusing functions for both part 1 and part 2 it's
+hard to show what I refactored to gain some speed, but the short version is that
+I'm using a two-dimensional array rather than my typically lazy "manhattan distance
+graph is a dictionary" approach.
+<br />
+There's zero reason to use a repeated neighbour finding function like I'm doing,
+you'd be better off just storing neighbours as edges within each node... I just felt
+like sacrificing a tiny amount of speed for a little memory saving.{' '}
+
+<CodeBox boxname="two" names="typescript|C#">
+
+```js
+export function partTwo(input: string[]): number | string {
+  const { graph, start } = parse(input)
+  findMinimumDistances(graph, start)
+  const distance = 20,
+    target = 100
+  let count = 0
+
+  for (let y = 0; y < graph.length; y++) {
+    for (let x = 0; x < graph[y].length; x++) {
+      if (graph[y][x].value != '#')
+        count += neighboursWithinManhattanDistance(
+          graph,
+          graph[y][x],
+          distance,
+          target
+        )
+    }
+  }
+  return count
+}
+```
+
+```csharp
+public override object PartTwo()
+{
+    var (grid, start) = Parse();
+    FindMinimumDistances(grid, start);
+    int distance = 20, target = 100;
+    int count = 0;
+
+    for (int y = 0; y < grid.GetLength(0); y++)
+    {
+        for (int x = 0; x < grid.GetLength(1); x++)
+        {
+            if (grid[y, x].Value != '#')
+                count += NeighboursWithinManhattanDistance(grid, grid[y, x], distance, target);
+        }
+    }
+    return count;
+}
+```
+
+</CodeBox>

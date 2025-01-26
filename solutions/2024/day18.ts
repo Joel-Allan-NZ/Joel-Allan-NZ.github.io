@@ -1,5 +1,3 @@
-import internal from 'stream'
-
 export function partOne(input: string[]): number | string {
   const graph = parse(input)
   const start = graph.get(0)?.get(0)!
