@@ -1,55 +1,84 @@
 export function partOne(input: string[]): number | string {
-  const towels = input[0].split(/, /)
-  const patterns = input.slice(2)
+  const graph = parse(input)
+  const trios = new Set<string>()
 
-  return patterns.reduce(
-    (total, pattern) => (canMakePattern(pattern, towels) ? total + 1 : total),
-    0
-  )
+  const tKeys = graph.keys().filter((key) => key.startsWith('t'))
+  tKeys.forEach((key) => {
+    const neighbours = graph.get(key)!
+    neighbours.forEach((neighbour) => {
+      const intersect = new Set([...neighbours]).intersection(
+        new Set([...graph.get(neighbour)!])
+      )
+      intersect.forEach((n) => {
+        const v = [key, n, neighbour]
+        trios.add(v.sort().join('|'))
+      })
+    })
+  })
+  return trios.size
 }
 
-function canMakePattern(pattern: string, towels: string[]): boolean {
-  const patterns = []
-  patterns.push(pattern)
-  while (patterns.length > 0) {
-    let currentPattern = patterns.pop()
+function parse(input: string[]): Map<string, string[]> {
+  const graph = new Map<string, string[]>()
+  input.forEach((line) => {
+    let split = line.split('-')
+    if (!graph.has(split[0])) graph.set(split[0], [split[1]])
+    else graph.get(split[0])?.push(split[1])
 
-    for (let towel of towels) {
-      if (currentPattern?.startsWith(towel)) {
-        if (currentPattern.length == towel.length) return true
-
-        patterns.push(currentPattern.slice(towel.length))
-      }
-    }
-  }
-  return false
+    if (!graph.has(split[1])) graph.set(split[1], [split[0]])
+    else graph.get(split[1])?.push(split[0])
+  })
+  return graph
 }
 
 export function partTwo(input: string[]): number | string {
-  const towels = input[0].split(/, /)
-  const patterns = input.slice(2)
-  const cache = new Map<string, number>()
+  const graph = parse(input)
+  const cliques: string[] = []
 
-  return patterns.reduce(
-    (total, pattern) => total + countValidPatterns(cache, pattern, towels),
-    0
+  bronKerbosch(
+    new Set<string>(),
+    new Set([...graph.keys()]),
+    new Set<string>(),
+    graph,
+    cliques
+  )
+  return cliques.reduce((longest, current) =>
+    current.length > longest.length ? current : longest
   )
 }
 
-function countValidPatterns(
-  cache: Map<string, number>,
-  pattern: string,
-  towels: string[]
-): number {
-  if (!pattern || pattern.length == 0) return 1
-  if (cache.has(pattern)) return cache.get(pattern)!
-
-  const prefixMatches = towels.filter((towel) => pattern.startsWith(towel))
-  const matchCount = prefixMatches.reduce(
-    (total, towel) =>
-      total + countValidPatterns(cache, pattern.slice(towel.length), towels),
-    0
+function bronKerbosch(
+  r: Set<string>,
+  p: Set<string>,
+  x: Set<string>,
+  graph: Map<string, string[]>,
+  cliques: string[]
+) {
+  if (p.size == 0 && x.size == 0) {
+    cliques.push([...r].sort().join(','))
+    return
+  }
+  const pivot = [...p.union(x)].reduce(
+    (max, current) =>
+      graph.get(current)!.length > (graph.get(max)?.length ?? 0)
+        ? current
+        : max,
+    ''
   )
-  cache.set(pattern, matchCount)
-  return matchCount
+  const pc: Set<string> = new Set(
+    [...p].filter((x) => !graph.get(pivot)!.includes(x))
+  )
+
+  pc.forEach((node) => {
+    const neighbourSet = new Set(graph.get(node)!)
+    bronKerbosch(
+      new Set([...r, node]),
+      p.intersection(neighbourSet),
+      x.intersection(neighbourSet),
+      graph,
+      cliques
+    )
+    p.delete(node)
+    x.add(node)
+  })
 }

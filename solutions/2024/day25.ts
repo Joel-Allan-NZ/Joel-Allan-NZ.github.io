@@ -1,55 +1,36 @@
 export function partOne(input: string[]): number | string {
-  const towels = input[0].split(/, /)
-  const patterns = input.slice(2)
+  const { keys, locks } = parse(input)
 
-  return patterns.reduce(
-    (total, pattern) => (canMakePattern(pattern, towels) ? total + 1 : total),
+  return keys.reduce(
+    (total, key) => total + locks.filter((lock) => isFit(key, lock, 5)).length,
     0
   )
 }
 
-function canMakePattern(pattern: string, towels: string[]): boolean {
-  const patterns = []
-  patterns.push(pattern)
-  while (patterns.length > 0) {
-    let currentPattern = patterns.pop()
+function parse(input: string[]): { keys: number[][]; locks: number[][] } {
+  const DIAGRAMHEIGHT = 7
+  const KEYSIZE = 5
+  const keys: number[][] = []
+  const locks: number[][] = []
 
-    for (let towel of towels) {
-      if (currentPattern?.startsWith(towel)) {
-        if (currentPattern.length == towel.length) return true
-
-        patterns.push(currentPattern.slice(towel.length))
+  for (let i = 0; i < input.length; i += DIAGRAMHEIGHT + 1) {
+    const lockOrKey: number[] = Array(5).fill(-1)
+    for (let j = 0; j < DIAGRAMHEIGHT; j++) {
+      for (let k = 0; k < KEYSIZE; k++) {
+        if (input[i + j][k] == '#') lockOrKey[k]++
       }
     }
+    if (input[i][0] != '#') keys.push(lockOrKey)
+    else locks.push(lockOrKey)
   }
-  return false
+
+  return { keys, locks }
+}
+
+function isFit(key: number[], lock: number[], keySize: number): boolean {
+  return key.every((value, index) => lock[index] + value <= keySize)
 }
 
 export function partTwo(input: string[]): number | string {
-  const towels = input[0].split(/, /)
-  const patterns = input.slice(2)
-  const cache = new Map<string, number>()
-
-  return patterns.reduce(
-    (total, pattern) => total + countValidPatterns(cache, pattern, towels),
-    0
-  )
-}
-
-function countValidPatterns(
-  cache: Map<string, number>,
-  pattern: string,
-  towels: string[]
-): number {
-  if (!pattern || pattern.length == 0) return 1
-  if (cache.has(pattern)) return cache.get(pattern)!
-
-  const prefixMatches = towels.filter((towel) => pattern.startsWith(towel))
-  const matchCount = prefixMatches.reduce(
-    (total, towel) =>
-      total + countValidPatterns(cache, pattern.slice(towel.length), towels),
-    0
-  )
-  cache.set(pattern, matchCount)
-  return matchCount
+  return 'Free Star! ⭐'
 }

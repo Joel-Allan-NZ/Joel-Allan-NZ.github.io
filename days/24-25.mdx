@@ -1,0 +1,94 @@
+---
+year: 2024
+puzz: 25
+---
+
+# 2024 Day 25 - Code Chronicle
+
+## Part One
+
+Christmas Day! 🎄 This one's effectively a freebie where you can take any lazy approach and have a quick result.
+
+<CodeBox boxname="one" names="typescript|C#">
+
+```js
+export function partOne(input: string[]): number | string {
+  const { keys, locks } = parse(input)
+
+  return keys.reduce(
+    (total, key) => total + locks.filter((lock) => isFit(key, lock, 5)).length,
+    0
+  )
+}
+
+function parse(input: string[]): { keys: number[][], locks: number[][] } {
+  const DIAGRAMHEIGHT = 7
+  const KEYSIZE = 5
+  const keys: number[][] = []
+  const locks: number[][] = []
+
+  for (let i = 0; i < input.length; i += DIAGRAMHEIGHT + 1) {
+    const lockOrKey: number[] = Array(5).fill(-1)
+    for (let j = 0; j < DIAGRAMHEIGHT; j++) {
+      for (let k = 0; k < KEYSIZE; k++) {
+        if (input[i + j][k] == '#') lockOrKey[k]++
+      }
+    }
+    if (input[i][0] != '#') keys.push(lockOrKey)
+    else locks.push(lockOrKey)
+  }
+
+  return { keys, locks }
+}
+
+function isFit(key: number[], lock: number[], keySize: number): boolean {
+  return key.every((value, index) => lock[index] + value <= keySize)
+}
+```
+
+```csharp
+const int DIAGRAMHEIGHT = 7;
+const int KEYSIZE = 5;
+
+public override object PartOne()
+{
+    var (keys, locks) = Parse();
+
+    return keys.Sum(key => locks.Count(l => IsFit(key, l)));
+
+    static bool IsFit(int[] key, int[] l) => key.Zip(l).All(x => x.First + x.Second <= KEYSIZE);
+}
+
+private static bool IsFit(int[] key, int[] l) => key.Zip(l).All(x => x.First + x.Second <= KEYSIZE);
+
+private (IEnumerable<int[]> keys, IEnumerable<int[]> locks) Parse()
+{
+    List<int[]> keys = [];
+    List<int[]> locks = [];
+
+    for (int i = 0; i < Input.Length; i += (DIAGRAMHEIGHT + 1))
+    {
+        int[] lockOrKey = [-1, -1, -1, -1, -1];
+        for (int j = 0; j < DIAGRAMHEIGHT; j++)
+        {
+            for (int k = 0; k < KEYSIZE; k++)
+            {
+                if (Input[i + j][k] == '#')
+                    lockOrKey[k]++;
+            }
+        }
+        if (Input[i][0] != '#')
+            keys.Add(lockOrKey);
+        else
+            locks.Add(lockOrKey);
+    }
+    return (keys, locks);
+}
+
+```
+
+</CodeBox>
+
+## Part Two
+
+The second part of christmas is a free star! :)

@@ -1,0 +1,195 @@
+---
+year: 2024
+puzz: 23
+---
+
+# 2024 Day 23 - LAN Party
+
+## Part One
+
+All we need to do here is find <a href="https://en.wikipedia.org/wiki/Clique_(graph_theory)">cliques</a> of three computers where at least one has a name starting with `t`. Nothing clever here, I just lazily take all computers that meet the naming requirement and find cliques of three computers containing them.
+
+<CodeBox boxname="one" names="typescript|C#">
+
+```js
+export function partOne(input: string[]): number | string {
+  const graph = parse(input)
+  const trios = new Set<string>()
+
+  const tKeys = graph.keys().filter((key) => key.startsWith('t'))
+  tKeys.forEach((key) => {
+    const neighbours = graph.get(key)!
+    neighbours.forEach((neighbour) => {
+      const intersect = new Set([...neighbours]).intersection(
+        new Set([...graph.get(neighbour)!])
+      )
+      intersect.forEach((n) => {
+        const v = [key, n, neighbour]
+        trios.add(v.sort().join('|'))
+      })
+    })
+  })
+  return trios.size
+}
+
+function parse(input: string[]): Map<string, string[]> {
+  const graph = new Map<string, string[]>()
+  input.forEach((line) => {
+    let split = line.split('-')
+    if (!graph.has(split[0])) graph.set(split[0], [split[1]])
+    else graph.get(split[0])?.push(split[1])
+
+    if (!graph.has(split[1])) graph.set(split[1], [split[0]])
+    else graph.get(split[1])?.push(split[0])
+  })
+  return graph
+}
+```
+
+```csharp
+public override object PartOne()
+{
+    HashSet<(string a, string b, string c)> trios = [];
+    Dictionary<string, List<string>> graph = Parse();
+
+    foreach (var kvp in graph.Where(node => node.Key.StartsWith('t')))
+    {
+        foreach (var neighbour in kvp.Value)
+        {
+            var intersect = graph[neighbour].Intersect(kvp.Value);
+            foreach (var n in intersect)
+            {
+                string[] res = [kvp.Key, n, neighbour];
+                string[] ordered = [.. res.Order()];
+                trios.Add((ordered[0], ordered[1], ordered[2]));
+            }
+        }
+    }
+    return trios.Count;
+}
+
+private Dictionary<string, List<string>> Parse()
+{
+    Dictionary<string, List<string>> graph = [];
+
+    var splitLine = Input.Select(x => x.Split('-'));
+    foreach (var split in splitLine)
+    {
+        if (!graph.TryGetValue(split[0], out var neighbours))
+            graph[split[0]] = [split[1]];
+        else
+            graph[split[0]].Add(split[1]);
+
+        if (!graph.TryGetValue(split[1], out neighbours))
+            graph[split[1]] = [split[0]];
+        else
+            graph[split[1]].Add(split[0]);
+    }
+    return graph;
+}
+```
+
+</CodeBox>
+
+## Part Two
+
+Finding a maximal clique is a considerably bigger <a href="https://en.wikipedia.org/wiki/Clique_problem">problem</a> than part 1. It screamed "hey, this is probably <a href="https://en.wikipedia.org/wiki/NP-hardness">NP-Hard</a>", which in turn means I was unlikely to find a great solution just by thinking extra hard.
+
+<br />
+
+I chose to use the <a href="https://en.wikipedia.org/wiki/Bron–Kerbosch_algorithm">Bron–Kerbosch</a> algorithm , and specifically the second variant that includes a pivot node;
+this graph of computers is dense, and the pivot approach is effective for that type
+of problem.
+
+<br />I won't flail around explaining a well-known and thoroughly understood
+algorithm like Bron-Kerbosch, I'll just say that it's pretty straight-forward to
+implement, and nice and quick for this problem.
+
+<CodeBox boxname="two" names="typescript|C#">
+
+```js
+export function partTwo(input: string[]): number | string {
+  const graph = parse(input)
+  const cliques: string[] = []
+
+  bronKerbosch(
+    new Set<string>(),
+    new Set([...graph.keys()]),
+    new Set<string>(),
+    graph,
+    cliques
+  )
+  return cliques.reduce((longest, current) =>
+    current.length > longest.length ? current : longest
+  )
+}
+
+function bronKerbosch(
+  r: Set<string>,
+  p: Set<string>,
+  x: Set<string>,
+  graph: Map<string, string[]>,
+  cliques: string[]
+) {
+  if (p.size == 0 && x.size == 0) {
+    cliques.push([...r].sort().join(','))
+    return
+  }
+  const pivot = [...p.union(x)].reduce(
+    (max, current) =>
+      graph.get(current)!.length > (graph.get(max)?.length ?? 0)
+        ? current
+        : max,
+    ''
+  )
+  const pc: Set<string> = new Set(
+    [...p].filter((x) => !graph.get(pivot)!.includes(x))
+  )
+
+  pc.forEach((node) => {
+    const neighbourSet = new Set(graph.get(node)!)
+    bronKerbosch(
+      new Set([...r, node]),
+      p.intersection(neighbourSet),
+      x.intersection(neighbourSet),
+      graph,
+      cliques
+    )
+    p.delete(node)
+    x.add(node)
+  })
+}
+```
+
+```csharp
+public override object PartTwo()
+{
+    Dictionary<string, List<string>> graph = Parse();
+    List<string> cliques = [];
+
+    BronKerbosch2([], [.. graph.Keys], [], graph, cliques);
+
+    return cliques.MaxBy(x => x.Length) ?? "";
+}
+
+static void BronKerbosch2(HashSet<string> R, HashSet<string> P, HashSet<string> X, Dictionary<string, List<string>> G, List<string> O)
+{
+    if (P.Count == 0 && X.Count == 0)
+    {
+        O.Add(string.Join(",", R.Order()));
+        return;
+    }
+    var pivot = P.Union(X).MaxBy(c => G[c].Count)!;
+    HashSet<string> PC = [.. P.Except(G[pivot])];
+
+    foreach (var node in PC)
+    {
+        BronKerbosch2([.. R.Union([node])], [.. P.Intersect(G[node])], [.. X.Intersect(G[node])], G, O);
+        P.Remove(node);
+        X.Add(node);
+    }
+}
+
+```
+
+</CodeBox>

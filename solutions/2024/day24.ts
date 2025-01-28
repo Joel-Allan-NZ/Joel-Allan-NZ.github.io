@@ -1,55 +1,164 @@
 export function partOne(input: string[]): number | string {
-  const towels = input[0].split(/, /)
-  const patterns = input.slice(2)
-
-  return patterns.reduce(
-    (total, pattern) => (canMakePattern(pattern, towels) ? total + 1 : total),
-    0
-  )
+  const { wires, gatesByWire } = parse(input)
+  const binaryString = runSystem(wires, gatesByWire)
+  return parseInt(binaryString, 2)
 }
 
-function canMakePattern(pattern: string, towels: string[]): boolean {
-  const patterns = []
-  patterns.push(pattern)
-  while (patterns.length > 0) {
-    let currentPattern = patterns.pop()
+interface Gate {
+  a: string
+  b: string
+  operation: string
+  output: string
+}
 
-    for (let towel of towels) {
-      if (currentPattern?.startsWith(towel)) {
-        if (currentPattern.length == towel.length) return true
+function parse(input: string[]): {
+  wires: Map<string, boolean | undefined>
+  gatesByWire: Map<string, Gate[]>
+} {
+  const wires = new Map<string, boolean | undefined>()
+  const gatesByWire = new Map<string, Gate[]>()
+  let gates = false
 
-        patterns.push(currentPattern.slice(towel.length))
+  input.forEach((line) => {
+    if (!line || line.length == 0) {
+      gates = true
+    } else {
+      if (gates) {
+        const split = line.split(/ /)
+        const gate: Gate = {
+          a: split[0],
+          b: split[2],
+          operation: split[1],
+          output: split[4],
+        }
+        if (!gatesByWire.has(gate.a)) gatesByWire.set(gate.a, [gate])
+        else gatesByWire.get(gate.a)?.push(gate)
+        if (!gatesByWire.has(gate.b)) gatesByWire.set(gate.b, [gate])
+        else gatesByWire.get(gate.b)?.push(gate)
+
+        if (!wires.has(gate.a)) wires.set(gate.a, undefined)
+        if (!wires.has(gate.b)) wires.set(gate.b, undefined)
+        if (!wires.has(gate.output)) wires.set(gate.output, undefined)
+      } else {
+        const split = line.split(/: /)
+        wires.set(split[0], split[1] === '1')
       }
     }
+  })
+  return { wires, gatesByWire }
+}
+
+function runSystem(
+  wires: Map<string, boolean | undefined>,
+  gates: Map<string, Gate[]>
+): string {
+  let gatesToProcess = [...gates.values().toArray()].flatMap((x) => x)
+  let gatesToProcessNext: Gate[] = []
+
+  while (gatesToProcess.length > 0) {
+    const currentGate = gatesToProcess.shift()!
+    const gateResult = resolveGate(currentGate, wires)
+    if (wires.get(currentGate.output) != gateResult) {
+      wires.set(currentGate.output, gateResult)
+      if (gates.has(currentGate.output)) {
+        gatesToProcessNext = [
+          ...gatesToProcessNext,
+          ...gates.get(currentGate.output)!,
+        ]
+      }
+    }
+    if (gatesToProcess.length == 0) {
+      gatesToProcess = gatesToProcessNext
+      gatesToProcessNext = []
+    }
   }
-  return false
+
+  return wires
+    .keys()
+    .filter((x) => x.startsWith('z'))
+    .toArray()
+    .sort((x, y) => (y > x ? 1 : y == x ? 0 : -1))
+    .reduce(
+      (total, current) => (wires.get(current) ? total + '1' : total + '0'),
+      ''
+    )
+}
+
+function resolveGate(
+  gate: Gate,
+  wires: Map<string, boolean | undefined>
+): boolean | undefined {
+  const a = wires.get(gate.a)
+  const b = wires.get(gate.b)
+
+  if (a === undefined || b === undefined) return undefined
+  if (gate.operation == 'AND') return a && b
+  if (gate.operation == 'OR') return a || b
+  if (gate.operation == 'XOR') return a != b
 }
 
 export function partTwo(input: string[]): number | string {
-  const towels = input[0].split(/, /)
-  const patterns = input.slice(2)
-  const cache = new Map<string, number>()
+  const { wires, gatesByWire } = parse(input)
+  const zBits =
+    'z' +
+    wires
+      .keys()
+      .reduce((sum, wire) => (wire.startsWith('z') ? sum + 1 : sum), -1)
+  const gates = [...new Set([...gatesByWire.values().flatMap((x) => x)])]
+  const incorrectGates = gates.filter(
+    (gate) => !isValidGate(gatesByWire, gate, zBits)
+  )
 
-  return patterns.reduce(
-    (total, pattern) => total + countValidPatterns(cache, pattern, towels),
-    0
+  return incorrectGates
+    .map((x) => x.output)
+    .sort()
+    .join(',')
+}
+
+function isValidGate(
+  gatesByWire: Map<string, Gate[]>,
+  gate: Gate,
+  zBits: string
+): boolean {
+  if (isFullAdderStart(gate)) {
+    if (gatesByWire.has(gate.output)) {
+      const childGates = gatesByWire.get(gate.output)!
+      if (
+        gate.operation == 'AND' &&
+        childGates.some((x) => x.operation == 'AND')
+      )
+        return false
+      if (
+        gate.operation == 'XOR' &&
+        childGates.some((x) => x.operation == 'OR')
+      )
+        return false
+    }
+  }
+  if (isFullAdderEnd(gate, zBits) && gate.operation != 'XOR') return false
+  if (isAdderMiddle(gate) && gate.operation == 'XOR') return false
+  return true
+}
+
+function isAdderMiddle(gate: Gate): boolean {
+  return (
+    !gate.a.startsWith('x') &&
+    !gate.a.startsWith('y') &&
+    !gate.b.startsWith('x') &&
+    !gate.b.startsWith('y') &&
+    !gate.output.startsWith('z')
   )
 }
 
-function countValidPatterns(
-  cache: Map<string, number>,
-  pattern: string,
-  towels: string[]
-): number {
-  if (!pattern || pattern.length == 0) return 1
-  if (cache.has(pattern)) return cache.get(pattern)!
+function isFullAdderEnd(gate: Gate, zBits: string): boolean {
+  return gate.output.startsWith('z') && gate.output != zBits
+}
 
-  const prefixMatches = towels.filter((towel) => pattern.startsWith(towel))
-  const matchCount = prefixMatches.reduce(
-    (total, towel) =>
-      total + countValidPatterns(cache, pattern.slice(towel.length), towels),
-    0
+function isFullAdderStart(gate: Gate) {
+  return (
+    (gate.a.startsWith('x') || gate.a.startsWith('y')) &&
+    (gate.b.startsWith('x') || gate.b.startsWith('y')) &&
+    !gate.a.endsWith('00') &&
+    !gate.b.endsWith('00')
   )
-  cache.set(pattern, matchCount)
-  return matchCount
 }

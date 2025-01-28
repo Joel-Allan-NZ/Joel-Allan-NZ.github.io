@@ -1,5 +1,6 @@
 import React from 'react'
 import { partOne, partTwo } from '../../solutions/handler'
+import { isStringObject } from 'util/types'
 
 export default function TryYourself({ year, puzz }) {
   const [puzzleInput, setPuzzleInput] = React.useState<string>('')
@@ -11,7 +12,13 @@ export default function TryYourself({ year, puzz }) {
   const runPartOne = () => {
     setSolving(true)
     partOne(year, puzz, puzzleInput.split(/\r|\n/))
-      .then((result) => setSolution(() => result))
+      .then((result) =>
+        setSolution(() =>
+          result == 0
+            ? 'Either you tried to run a bad input, or the answer was 0'
+            : result
+        )
+      )
       .catch(() =>
         setSolution(
           'Something went wrong! Ensure you have the correct input and try again.'
@@ -22,7 +29,13 @@ export default function TryYourself({ year, puzz }) {
   const runPartTwo = () => {
     setSolving(true)
     partTwo(year, puzz, puzzleInput.split(/\r|\n/))
-      .then((result) => setSolution(() => result))
+      .then((result) =>
+        setSolution(() =>
+          result == 0
+            ? 'Either you tried to run a bad input, or the answer was 0'
+            : result
+        )
+      )
       .catch(() =>
         setSolution(
           'Something went wrong! Ensure you have the correct input and try again.'
