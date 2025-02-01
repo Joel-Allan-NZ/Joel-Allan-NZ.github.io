@@ -1,13 +1,11 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-:root {
-}
 
 @layer base {
   h1 {
     @apply text-2xl;
-    @apply mb-1;
+    @apply mb-3;
   }
   h2 {
     @apply text-xl;
@@ -22,5 +20,14 @@
     @apply list-decimal;
     @apply ml-5;
     @apply my-2;
+  }
+  #gatsby-focus-wrapper {
+    @apply bg-blue-50;
+  }
+}
+
+@layer components {
+  .adventofcode a {
+    @apply underline;
   }
 }

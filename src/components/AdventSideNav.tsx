@@ -1,6 +1,6 @@
 import { useStaticQuery, graphql } from 'gatsby'
-import { stringify } from 'querystring'
 import React from 'react'
+import Footer from './Footer'
 
 export default function AdventSideNav({ children }: { children: any }) {
   const data = useStaticQuery(graphql`
@@ -39,16 +39,16 @@ export default function AdventSideNav({ children }: { children: any }) {
   const [expanded, setExpanded] = React.useState(parse(data))
 
   return (
-    <div>
-      <nav className="float-left max-h-1vh w-[10%] flex-col">
-        <h4 className="ml-1">
+    <div className="bg-blue-50 ">
+      <nav className="float-left max-h-[0.9vh]  w-[10%] flex-col">
+        <h4 className="ml-1 text-xl bg-blue-50">
           <a href="/advent-of-code">Advent of Code</a>
         </h4>
         <div className="relative block w-full ">
           {expanded.map((expandedYear, index) => {
             return (
               <div key={`${expandedYear.year} collapsible`}>
-                <div className="flex items-center w-full p-0 leading-tight transition-all rounded-lg outline-none transition-colors ease-in-out delay-100 duration-200 hover:bg-blue-50">
+                <div className="flex items-center w-full p-0 leading-tight bg-blue-50 transition-all rounded-lg outline-none transition-colors ease-in-out delay-100 duration-200 hover:bg-blue-200">
                   <button
                     onClick={() =>
                       setExpanded(() => [

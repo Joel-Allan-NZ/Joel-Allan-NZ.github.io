@@ -139,8 +139,10 @@ const links = [
 export default function IndexPage(props: PageProps) {
   return (
     <main>
-      <h1>Placeholder Page</h1>
-      <a href="/advent-of-code">Advent of Code 2024</a>
+      <div className="width-[60%] ml-[20%]">
+        <h1>Placeholder Page</h1>
+        <a href="/advent-of-code">Advent of Code 2024</a>
+      </div>
     </main>
   )
 }
@@ -213,4 +215,4 @@ export default function IndexPage(props: PageProps) {
 
 //export default IndexPage
 
-export const Head: HeadFC = () => <title>Home Page</title>
+export const Head: HeadFC = () => <title>Joel-Allan-NZ - Home</title>

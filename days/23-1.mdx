@@ -1,0 +1,164 @@
+---
+year: 2023
+puzz: 1
+---
+
+# 2023 Day 1 - Trebuchet?!
+
+## Part One
+
+A typical first puzzle of the year, just making sure we're capable of reading and parsing strings.
+
+<CodeBox names="typescript|C#">
+
+```js
+export function partOne(input: string[]): number | string {
+  return input.reduce((total, line) => total + readCalibrationValue(line), 0)
+}
+
+function readCalibrationValue(line: string): number {
+  const digits = ['a', 'a']
+
+  line.split('').forEach((c) => {
+    if (!isNaN(parseInt(c))) {
+      if (digits[0] == 'a') digits[0] = c
+      digits[1] = c
+    }
+  })
+  return parseInt(digits.join(''))
+}
+```
+
+```csharp
+public override object PartOne()
+{
+    return Input.Sum(line => ReadCalibrationValue(line));
+}
+
+private static int ReadCalibrationValue(string line)
+{
+    char[] digits = ['a', 'a'];
+
+    foreach (char c in line)
+    {
+        if (char.IsDigit(c))
+        {
+            if (digits[0] == 'a')
+                digits[0] = c;
+            digits[1] = c;
+        }
+    }
+    return int.Parse(digits);
+}
+```
+
+</CodeBox>
+
+## Part Two
+
+A slightly more complex problem with matching substrings, but still very simple stuff without a lot of discussion to be had.
+
+<br />
+The C# version is slightly wordier + performant compared to the Typescript version...
+it just felt 'right' to cut fewer corners in a statically typed language.
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partTwo(input: string[]): number | string {
+  const spelled = [
+    'one',
+    'two',
+    'three',
+    'four',
+    'five',
+    'six',
+    'seven',
+    'eight',
+    'nine',
+  ]
+  return input.reduce(
+    (total, line) =>
+      total +
+      parseInt(readCalibrationWithSpelledValues(line, spelled).join('')),
+    0
+  )
+}
+
+function readCalibrationWithSpelledValues(
+  line: string,
+  spelled: string[]
+): string[] {
+  const digits: string[] = []
+
+  line.split('').forEach((c, index) => {
+    if (!isNaN(parseInt(c))) {
+      digits.push(c)
+    } else {
+      let value = spelled.find((x) => line.slice(index).startsWith(x))
+      if (value) {
+        value = (spelled.findIndex((v) => v == value) + 1).toString()
+        digits.push(value)
+      }
+    }
+  })
+  return [digits[0], digits.slice(-1)[0]]
+}
+```
+
+```csharp
+public override object PartTwo()
+{
+    List<string> spelled = [
+        "one",
+        "two",
+        "three",
+        "four",
+        "five",
+        "six",
+        "seven",
+        "eight",
+        "nine"
+    ];
+    return Input.Sum(line => ReadCalibrationValueWithSpelledValues(line, spelled));
+}
+
+private static int ReadCalibrationValueWithSpelledValues(string line, List<string> spelled)
+{
+    char[] digits = ['a', 'a'];
+
+    for (int i = 0; i < line.Length; i++)
+    {
+        if (char.IsDigit(line[i]))
+        {
+            if (digits[0] == 'a')
+                digits[0] = line[i];
+            digits[1] = line[i];
+        }
+        else if (HasSpelledValue(spelled, line[i..], out char value))
+        {
+            if (digits[0] == 'a')
+                digits[0] = value;
+            digits[1] = value;
+        }
+    }
+    return int.Parse(digits);
+}
+
+private static bool HasSpelledValue(List<string> validSpelled, string subString, out char spelledValue)
+{
+    spelledValue = 'a';
+
+    for (int i = 0; i < validSpelled.Count; i++)
+    {
+        if (subString.StartsWith(validSpelled[i]))
+        {
+            spelledValue = (i + 1).ToString()[0];
+            return true;
+        }
+    }
+    return false;
+}
+```
+
+</CodeBox>

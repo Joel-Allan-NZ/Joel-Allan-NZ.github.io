@@ -2,7 +2,13 @@ import React from 'react'
 import { partOne, partTwo } from '../../solutions/handler'
 import { isStringObject } from 'util/types'
 
-export default function TryYourself({ year, puzz }) {
+export default function TryYourself({
+  year,
+  puzz,
+}: {
+  year: string
+  puzz: string
+}) {
   const [puzzleInput, setPuzzleInput] = React.useState<string>('')
   const [solution, setSolution] = React.useState<string | number | undefined>(
     undefined

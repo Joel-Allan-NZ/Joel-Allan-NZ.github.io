@@ -11,22 +11,19 @@ const config: GatsbyConfig = {
   graphqlTypegen: true,
   plugins: [
     'gatsby-plugin-postcss',
+    {
+      resolve: `gatsby-plugin-manifest`,
+      options: {
+        name: `GatsbyJS`,
+        short_name: `GatsbyJS`,
+        start_url: `/`,
+        background_color: `#f7f0eb`,
+        theme_color: `#a2466c`,
+        display: `standalone`,
+        icon: `src/images/archie-head.png`,
+      },
+    },
     `gatsby-transformer-remark`,
-    // {
-    //   resolve: `gatsby-transformer-remark`,
-    //   options: {
-    //     plugins: [
-    //       {
-    //         resolve: `gatsby-remark-highlight-code`,
-    //         options: {
-    //           terminal: 'carbon',
-    //           theme: 'vscode',
-    //           lineNumbers: true,
-    //         },
-    //       },
-    //     ],
-    //   },
-    // },
     {
       resolve: `gatsby-transformer-yaml`,
       options: {
