@@ -1,83 +1,52 @@
 export function partOne(input: string[]): number | string {
-  return [input, rotateStringArray(input)].reduce((total, current) => {
-    const straight = current.reduce(
-      (t, c) =>
-        t + (c.match(/XMAS/g)?.length ?? 0) + (c.match(/SAMX/g)?.length ?? 0),
+  const cards = parse(input)
+
+  return cards
+    .values()
+    .reduce((total, card) => (card == 0 ? total : total + 2 ** (card - 1)), 0)
+}
+
+function parse(input: string[]): Map<number, number> {
+  const cards = new Map<number, number>()
+
+  input.forEach((line) => {
+    const split = line.split('|')
+    const num = split[0].split(':')
+    const numbers = new Set<string>([
+      ...num[1].matchAll(/\d+/g).map((x) => x[0]),
+    ])
+    const winning = split[1].matchAll(/\d+/g)
+    const game = parseInt(num[0].match(/\d+/)![0])
+
+    const winningCount = winning.reduce(
+      (total, current) => (numbers.has(current[0]) ? total + 1 : total),
       0
     )
-    return total + straight + countDiagonal(current)
-  }, 0)
-}
-
-function rotateStringArray(input: string[]): string[] {
-  const rotated: string[] = []
-  for (let i = 0; i < input[0].length; i++) {
-    rotated.push(
-      input
-        .map((current) => current[i])
-        .reverse()
-        .join('')
-    )
-  }
-  return rotated
-}
-
-function countDiagonal(input: string[]): number {
-  return input.reduce((total, current, y) => {
-    return (
-      total +
-      current
-        .split('')
-        .reduce(
-          (t, c, x) =>
-            isMatchStartPoint(input, x, y, [0, 1, 2, 3]) ? t + 1 : t,
-          0
-        )
-    )
-  }, 0)
-}
-
-function isMatchStartPoint(
-  input: string[],
-  x: number,
-  y: number,
-  range: number[]
-): boolean {
-  return (
-    y < input.length - 3 &&
-    x < input[y].length - 3 &&
-    (range.every((r) => input[y + r][x + r] == 'XMAS'[r]) ||
-      range.every((r) => input[y + r][x + r] == 'SAMX'[r]))
-  )
+    cards.set(game, winningCount)
+  })
+  return cards
 }
 
 export function partTwo(input: string[]): number | string {
-  return input.reduce((total, current, y) => {
-    return (
-      total +
-      current
-        .split('')
-        .reduce(
-          (t, c, x) =>
-            input[y][x] == 'A' && isACross(input, y, x) ? t + 1 : t,
-          0
-        )
-    )
-  }, 0)
+  const cards = parse(input)
+  const cache = new Map<number, number>()
+  return cards
+    .keys()
+    .reduce((total, card) => countCardWinnings(cards, cache, card) + total, 0)
 }
 
-function isACross(input: string[], y: number, x: number): boolean {
-  if (x == 0 || y == 0 || y > input.length - 2 || x > input[y].length - 2)
-    return false
+function countCardWinnings(
+  cards: Map<number, number>,
+  cache: Map<number, number>,
+  card: number
+): number {
+  if (cache.has(card)) return cache.get(card)!
 
-  const corners = [
-    input[y - 1][x - 1],
-    input[y + 1][x - 1],
-    input[y - 1][x + 1],
-    input[y + 1][x + 1],
-  ]
-  const count = { M: 0, S: 0, X: 0, A: 0 }
-  corners.forEach((x) => count[x as keyof typeof count]++)
+  const winSize = cards.get(card)! + card
+  let total = 1
+  for (let i = card + 1; i <= winSize; i++)
+    total += countCardWinnings(cards, cache, i)
 
-  return count.M == 2 && count.S == 2 && corners[0] != corners[3]
+  cache.set(card, total)
+  return total
 }

@@ -1,0 +1,133 @@
+---
+year: 2023
+puzz: 4
+---
+
+<h1>
+  <a href="https://adventofcode.com/2023/day/4">2023 Day 4 - Scratchcards</a>
+</h1>
+
+## Part One
+
+Purely a matter of parsing the input and checking whether the winning number count is adequate. Not a lot to this, definitely set up for part 2.
+
+<CodeBox names="typescript|C#">
+
+```js
+export function partOne(input: string[]): number | string {
+  const cards = parse(input)
+
+  return cards
+    .values()
+    .reduce((total, card) => (card == 0 ? total : total + 2 ** (card - 1)), 0)
+}
+
+function parse(input: string[]): Map<number, number> {
+  const cards = new Map<number, number>()
+
+  input.forEach((line) => {
+    const split = line.split('|')
+    const num = split[0].split(':')
+    const numbers = new Set<string>([
+      ...num[1].matchAll(/\d+/g).map((x) => x[0]),
+    ])
+    const winning = split[1].matchAll(/\d+/g)
+    const game = parseInt(num[0].match(/\d+/)![0])
+
+    const winningCount = winning.reduce(
+      (total, current) => (numbers.has(current[0]) ? total + 1 : total),
+      0
+    )
+    cards.set(game, winningCount)
+  })
+  return cards
+}
+```
+
+```csharp
+public override object PartOne()
+{
+    Dictionary<int, int> cards = Parse(Input);
+    return cards.Sum(x => x.Value == 0 ? 0 : (int)Math.Pow(2, x.Value - 1));
+}
+
+private static Dictionary<int, int> Parse(string[] input)
+{
+    Dictionary<int, int> cards = [];
+    foreach (var line in input)
+    {
+        var split = line.Split('|');
+        var num = split[0].Split(':');
+        var numbers = Regex.Matches(num[1], @"\d+").Select(x => x.Value).ToHashSet();
+        var winning = Regex.Matches(split[1], @"\d+");
+        var game = Regex.Match(num[0], @"\d+").Value;
+        cards[int.Parse(game)] = winning.Count(x => numbers.Contains(x.Value));
+    }
+    return cards;
+}
+```
+
+</CodeBox>
+
+## Part Two
+
+Nothing groundbreaking here, just <a href="https://en.wikipedia.org/wiki/Recursion_(computer_science)">recursively</a> finding the number of cards awarded by a win by also checking how cards the children award (and grandchildren and...). Values are <a href="https://en.wikipedia.org/wiki/Memoization">memoized</a> to avoid recalculating values.
+Take those values, add 'em up, and you have your total.
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partTwo(input: string[]): number | string {
+  const cards = parse(input)
+  const cache = new Map<number, number>()
+  return cards
+    .keys()
+    .reduce((total, card) => countCardWinnings(cards, cache, card) + total, 0)
+}
+
+function countCardWinnings(
+  cards: Map<number, number>,
+  cache: Map<number, number>,
+  card: number
+): number {
+  if (cache.has(card)) return cache.get(card)!
+
+  const winSize = cards.get(card)! + card
+  let total = 1
+  for (let i = card + 1; i <= winSize; i++)
+    total += countCardWinnings(cards, cache, i)
+
+  cache.set(card, total)
+  return total
+}
+```
+
+```csharp
+public override object PartTwo()
+{
+    Dictionary<int, int> cards = Parse(Input);
+    Dictionary<int, int> cache = [];
+    return cards.Sum(card => CountCardWinnings(cards, cache, card.Key));
+}
+
+private static int CountCardWinnings(Dictionary<int, int> cards, Dictionary<int, int> cache, int card)
+{
+    if (cache.TryGetValue(card, out int value))
+    {
+        return value;
+    }
+    else
+    {
+        int winSize = cards[card];
+        int sum = 1;
+        for (int i = card + 1; i <= card + winSize; i++)
+        {
+            sum += CountCardWinnings(cards, cache, i);
+        }
+        cache[card] = sum;
+        return sum;
+    }
+}
+```
+
+</CodeBox>
