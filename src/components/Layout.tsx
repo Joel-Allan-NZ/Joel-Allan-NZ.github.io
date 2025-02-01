@@ -21,6 +21,13 @@ export default function Layout({
       <Header />
       <AdventSideNav>
         <div className="adventofcode max-w-[70%] ml-[10%] ">
+          <h1>
+            <a
+              href={`https://adventofcode.com/${pageContext.year}/day/${pageContext.puzz}`}
+            >
+              {`${pageContext.year} Day ${pageContext.puzz} - ${pageContext.title}`}
+            </a>
+          </h1>
           <MDXProvider components={shortcodes}>{children}</MDXProvider>
           {pageContext.puzz && pageContext.year ? (
             <TryYourself

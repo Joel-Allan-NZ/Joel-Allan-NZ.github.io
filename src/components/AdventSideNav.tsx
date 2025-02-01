@@ -11,6 +11,7 @@ export default function AdventSideNav({ children }: { children: any }) {
           frontmatter {
             year
             puzz
+            title
           }
           internal {
             contentFilePath

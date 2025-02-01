@@ -12,6 +12,7 @@ exports.createPages = async ({ graphql, actions, reporter }) => {
           frontmatter {
             year
             puzz
+            title
           }
           internal {
             contentFilePath
@@ -39,6 +40,7 @@ exports.createPages = async ({ graphql, actions, reporter }) => {
         id: node.id,
         puzz: node.frontmatter.puzz,
         year: node.frontmatter.year,
+        title: node.frontmatter.title,
       },
     })
   })
