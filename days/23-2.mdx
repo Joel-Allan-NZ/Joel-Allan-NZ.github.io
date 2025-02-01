@@ -1,0 +1,114 @@
+---
+year: 2023
+puzz: 2
+---
+
+<h1>
+  <a href="https://adventofcode.com/2023/day/2">2023 Day 2 - Cube Conundrum</a>
+</h1>
+
+## Part One
+
+With a list of key-value pairs to check, a Map makes for an obvious data structure choice.
+
+<br />
+You could of course instead just check each line as you read it rather than first
+creating a map as I am, but I (correctly) guessed that it would be relevant and reusable
+for part 2.{' '}
+
+<CodeBox names="typescript|C#">
+
+```js
+export function partOne(input: string[]): number | string {
+  const targets = [
+    { count: 14, colour: 'blue' },
+    { count: 12, colour: 'red' },
+    { count: 13, colour: 'green' },
+  ]
+  const counts = parse(input)
+
+  return counts.reduce((total, count, index) => {
+    if (targets.every((target) => count.get(target.colour)! <= target.count))
+      return total + index + 1
+    return total
+  }, 0)
+}
+
+function parse(input: string[]): Map<string, number>[] {
+  const gameCounts: Map<string, number>[] = []
+  input.forEach((line) => {
+    const gameCount = new Map<string, number>()
+    const games = line.split(/[:;,]/).slice(1)
+    games.forEach((game) => {
+      const pair = game.trim().split(' ')
+      const existing = gameCount.get(pair[1]) ?? 0
+      gameCount.set(pair[1], Math.max(parseInt(pair[0]), existing))
+    })
+    gameCounts.push(gameCount)
+  })
+  return gameCounts
+}
+```
+
+```csharp
+public override object PartOne()
+{
+    var counts = Parse();
+    List<(int max, string colour)> targets = [(14, "blue"), (12, "red"), (13, "green")];
+    int sum = 0;
+    for (int i = 0; i < counts.Count; i++)
+    {
+        if (targets.All(target => counts[i][target.colour] <= target.max))
+            sum += i + 1;
+    }
+    return sum;
+}
+
+private List<Dictionary<string, int>> Parse()
+{
+    List<Dictionary<string, int>> gameCounts = [];
+    foreach (var line in Input)
+    {
+        Dictionary<string, int> gameCount = [];
+        var games = line.Split([':', ';', ','], StringSplitOptions.RemoveEmptyEntries).Skip(1);
+        foreach (var game in games)
+        {
+            var pairValues = game.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (!gameCount.TryGetValue(pairValues[1], out int value))
+                gameCount[pairValues[1]] = int.Parse(pairValues[0]);
+            else
+                gameCount[pairValues[1]] = Math.Max(value, int.Parse(pairValues[0]));
+        }
+        gameCounts.Add(gameCount);
+    }
+    return gameCounts;
+}
+```
+
+</CodeBox>
+
+## Part Two
+
+Find the smallest value for each key in each line of the input. Still just a warm-up problem, all about getting very fast leaderboard times.
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partTwo(input: string[]): number | string {
+  const counts = parse(input)
+  return counts.reduce(
+    (total, count) => total + count.values().reduce((t, value) => t * value, 1),
+    0
+  )
+}
+```
+
+```csharp
+public override object PartTwo()
+{
+    var counts = Parse();
+    return counts.Sum(count => count.Values.Aggregate((x, y) => x * y));
+}
+```
+
+</CodeBox>

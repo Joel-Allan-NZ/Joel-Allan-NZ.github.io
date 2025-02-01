@@ -1,37 +1,37 @@
 export function partOne(input: string[]): number | string {
-  return input.reduce((sum, current) => {
-    const parsedLine = current.split(/\s+/).map((y) => parseInt(y))
-    return areLevelsSafe(parsedLine) ? sum + 1 : sum
+  const targets = [
+    { count: 14, colour: 'blue' },
+    { count: 12, colour: 'red' },
+    { count: 13, colour: 'green' },
+  ]
+  const counts = parse(input)
+
+  return counts.reduce((total, count, index) => {
+    if (targets.every((target) => count.get(target.colour)! <= target.count))
+      return total + index + 1
+    return total
   }, 0)
 }
 
-function areLevelsSafe(levels: number[]): boolean {
-  let increasing: boolean | null = null
-
-  return levels.slice(0, -1).every((current, index) => {
-    increasing ??= levels[index + 1] > current
-
-    return (
-      increasing == levels[index + 1] > current &&
-      levels[index + 1] != current &&
-      Math.abs(levels[index + 1] - current) < 4
-    )
+function parse(input: string[]): Map<string, number>[] {
+  const gameCounts: Map<string, number>[] = []
+  input.forEach((line) => {
+    const gameCount = new Map<string, number>()
+    const games = line.split(/[:;,]/).slice(1)
+    games.forEach((game) => {
+      const pair = game.trim().split(' ')
+      const existing = gameCount.get(pair[1]) ?? 0
+      gameCount.set(pair[1], Math.max(parseInt(pair[0]), existing))
+    })
+    gameCounts.push(gameCount)
   })
+  return gameCounts
 }
 
 export function partTwo(input: string[]): number | string {
-  return input.reduce((sum, current) => {
-    const parsedLine = current.split(/\s+/).map((y) => parseInt(y))
-    return areLevelsSafeWithDampener(parsedLine) ? sum + 1 : sum
-  }, 0)
-}
-
-function areLevelsSafeWithDampener(levels: number[]): boolean {
-  return (
-    areLevelsSafe(levels) ||
-    levels.find((level, index) => {
-      const subLevel = [...levels.slice(0, index), ...levels.slice(index + 1)]
-      return areLevelsSafe(subLevel)
-    }) !== undefined
+  const counts = parse(input)
+  return counts.reduce(
+    (total, count) => total + count.values().reduce((t, value) => t * value, 1),
+    0
   )
 }
