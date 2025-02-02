@@ -1,0 +1,285 @@
+---
+year: 2023
+puzz: 5
+title: If You Give A Seed A Fertilizer
+---
+
+## Part One
+
+Whew, that was pretty verbose.
+
+<br />
+The idea here is to map each map to the next map, then the result of those merged
+maps to the next map, continuing until all maps have been merged. For discrete values
+this would be vanishingly simple, but of course we're dealing with ranges of values.
+<br />
+To make it more readable for myself I switched up the three-value setup: instead
+of a new value, a start value, and a range value like the input, I opted for a start
+value, an end value, and an offset. So for the the first example `seed-to-soil` map,
+`50 98 2` becomes `start: 98, end:99, offset:-48`.
+<br /> From there it's a matter of merging each set of maps, creating new ranges
+that reflect the offsets from each of the merged maps. I sort the values for
+each map in ascending order, then only consider the smallest at any given point
+in time, constructing new ranges from any overlap (or lackthereof).
+<br />
+
+<CodeBox names="typescript|C#">
+
+```js
+export function partOne(input: string[]): number | string {
+  const { seeds, reduced } = parseAndReduce(input)
+
+  return seeds.reduce((min, seed) => {
+    const inRange = reduced.find(
+      (range) => range.start <= seed && range.end >= seed
+    )
+    const value = inRange ? seed + inRange.offset : seed
+    return min < value ? min : value
+  }, 2 ** 63)
+}
+
+interface OffsetRange {
+  start: number
+  end: number
+  offset: number
+}
+
+function parseAndReduce(input: string[]): {
+  seeds: number[]
+  reduced: OffsetRange[]
+} {
+  const seeds = input[0]
+    .split(' ')
+    .slice(1)
+    .map((x) => parseInt(x))
+
+  let reduced: OffsetRange[] = []
+  let next: OffsetRange[] = []
+
+  for (let i = 3; i < input.length; i++) {
+    const line = input[i]
+    if (!line || line.length == 0) {
+      i++
+      reduced = reduced.length == 0 ? next : merge(reduced, next)
+      next = []
+    } else {
+      const split = line.split(' ').map((x) => parseInt(x))
+      next.push({
+        start: split[1],
+        end: split[2] + split[1] - 1,
+        offset: split[0] - split[1],
+      })
+    }
+  }
+  return { seeds, reduced: merge(reduced, next) }
+}
+
+function merge(a: OffsetRange[], b: OffsetRange[]): OffsetRange[] {
+  const result: OffsetRange[] = []
+  a.sort((x, y) => x.start + x.offset - (y.start + y.offset))
+  b.sort((x, y) => x.start - y.start)
+  let aRange = a.shift()
+  let bRange = b.shift()
+
+  while (aRange && bRange) {
+    result.push(mergeRanges(aRange, bRange))
+
+    if (aRange.end < aRange.start) aRange = a.shift()
+    if (bRange.end < bRange.start) bRange = b.shift()
+  }
+
+  if (aRange && aRange.end >= aRange.start) result.push(aRange)
+  if (bRange && bRange.end >= bRange.start) result.push(bRange)
+
+  return [...result, ...b, ...a]
+}
+
+function mergeRanges(aRange: OffsetRange, bRange: OffsetRange): OffsetRange {
+  let result: OffsetRange = { start: 0, end: 0, offset: 0 }
+  if (aRange.start + aRange.offset == bRange.start) {
+    const end = Math.min(aRange.end + aRange.offset, bRange.end) - aRange.offset
+    result = { start: aRange.start, end, offset: aRange.offset + bRange.offset }
+    aRange.start = end + 1
+    bRange.start = end + aRange.offset + 1
+  } else {
+    let smaller = aRange
+    let end = 0
+    if (aRange.start + aRange.offset < bRange.start) {
+      end = Math.min(aRange.end, bRange.start - 1 - aRange.offset)
+    } else {
+      smaller = bRange
+      end = Math.min(bRange.end, aRange.start - 1 + aRange.offset)
+    }
+    result = { start: smaller.start, end, offset: smaller.offset }
+    smaller.start = end + 1
+  }
+  return result
+}
+```
+
+```csharp
+public override object PartOne()
+{
+    var (seeds, reduced) = ParseAndReduce();
+
+    return seeds.Min(seed =>
+    {
+        foreach (var range in reduced)
+        {
+            if (range.Start <= seed && range.End >= seed)
+                return seed + range.Offset;
+        }
+        return seed;
+    });
+}
+
+private (List<long> Seeds, List<OffsetRange>) ParseAndReduce()
+{
+    var seeds = Input[0].Split(' ')[1..].Select(x => long.Parse(x)).ToList();
+    List<OffsetRange> reduced = [];
+    List<OffsetRange> next = [];
+
+    for (int i = 3; i < Input.Length; i++)
+    {
+        var line = Input[i];
+        if (string.IsNullOrEmpty(line))
+        {
+            i++;
+            reduced = reduced.Count == 0 ? next : Merge(reduced, next);
+            next = [];
+        }
+        else
+        {
+            var split = line.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(x => long.Parse(x)).ToList();
+            next.Add(new(split[1], split[2] + split[1] - 1, split[0] - split[1]));
+        }
+    }
+    return (seeds, Merge(reduced, next));
+}
+
+private static List<OffsetRange> Merge(List<OffsetRange> a, List<OffsetRange> b)
+{
+    List<OffsetRange> result = [];
+    Queue<OffsetRange> sortedA = new(a.OrderBy(x => x.Start + x.Offset));
+    Queue<OffsetRange> sortedB = new(b.OrderBy(x => x.Start));
+    var aRange = sortedA.Dequeue();
+    var bRange = sortedB.Dequeue();
+
+    while (aRange != null && bRange != null)
+    {
+        result.Add(MergeRanges(aRange, bRange));
+
+        if (aRange.End < aRange.Start)
+            aRange = sortedA.Count > 0 ? sortedA.Dequeue() : null;
+
+        if (bRange.End < bRange.Start)
+            bRange = sortedB.Count > 0 ? sortedB.Dequeue() : null;
+    }
+
+    return [.. result, .. sortedB, .. sortedA];
+}
+
+private static OffsetRange MergeRanges(OffsetRange a, OffsetRange b)
+{
+    OffsetRange result;
+    if (a.Start + a.Offset == b.Start)
+    {
+        var end = Math.Min(a.End + a.Offset, b.End);
+        result = new(a.Start, end - a.Offset, a.Offset + b.Offset);
+        a.Start = end - a.Offset + 1;
+        b.Start = end + 1;
+    }
+    else
+    {
+        var smaller = a;
+        long end;
+        if (a.Start + a.Offset < b.Start)
+        {
+            end = Math.Min(a.End, b.Start - 1 - a.Offset);
+        }
+        else
+        {
+            smaller = b;
+            end = Math.Min(b.End, a.Start - 1 + a.Offset);
+        }
+        result = new(smaller.Start, end, smaller.Offset);
+        smaller.Start = end + 1;
+    }
+    return result;
+}
+
+internal class OffsetRange(long start, long end, long offset)
+{
+    internal long Start = start;
+    internal long End = end;
+    internal long Offset = offset;
+}
+```
+
+</CodeBox>
+
+## Part Two
+
+A simple approach here: After all the parsing and reducing maps of part one, all that is needed is to sort seed ranges by smallest to largest, and for each of those seed ranges in turn check for an overlap with any map range. The first we find is guaranteed to be the smallest possible
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partTwo(input: string[]): number | string {
+  const { seeds, reduced } = parseAndReduce(input)
+  reduced.sort((x, y) => x.start + x.offset - (y.start + y.offset))
+  const seedRanges = seeds
+    .slice(1)
+    .map((seed, index) => ({
+      start: seeds[index],
+      end: seeds[index] + seed - 1,
+    }))
+    .filter((x, i) => i % 2 == 0)
+    .toSorted((x, y) => x.start - y.start)
+
+  for (const range of reduced) {
+    for (const seedRange of seedRanges) {
+      if (seedRange.start >= range.start && seedRange.start <= range.end)
+        return seedRange.start + range.offset
+      if (seedRange.start <= range.start && seedRange.end >= range.start)
+        return range.start + range.offset
+    }
+  }
+  return 'Not Found'
+}
+```
+
+```csharp
+public override object PartTwo()
+{
+    var (seeds, reduced) = ParseAndReduce();
+    var sorted = reduced.ToArray().OrderBy(x => x.Start + x.Offset);
+    var seedRanges = seeds[1..].Select((x, index) => (start: seeds[index], end: seeds[index] + x - 1))
+                               .Where((x, i) => i % 2 == 0)
+                               .OrderBy(x => x.start)
+                               .ToList();
+
+    foreach (var range in sorted)
+    {
+        foreach (var seed in seedRanges)
+        {
+            var minimumOverlap = MinimumOverlap(range, seed);
+            if (minimumOverlap != -1)
+                return minimumOverlap + range.Offset;
+        }
+    }
+    return -1;
+
+    static long MinimumOverlap(OffsetRange a, (long start, long end) seed)
+    {
+        if (seed.start >= a.Start && seed.start <= a.End)
+            return seed.start;
+        if (seed.start <= a.Start && seed.end >= a.Start)
+            return a.Start;
+
+        return -1;
+    }
+}
+```
+
+</CodeBox>
