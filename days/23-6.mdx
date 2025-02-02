@@ -1,0 +1,108 @@
+---
+year: 2023
+puzz: 6
+title: Wait For It
+---
+
+## Part One
+
+In stark contrast to yesterday's lengthy solution, today is short and sweet with a closed solution.
+
+<br />
+The problem text lays it out in the example: there are upper and lower bounds of
+how long you can hold the button and travel the required distance, and all points
+in between those bounds are also valid; we're looking at a parabolic function. To
+find those intersects, we can use the
+<a href="https://en.wikipedia.org/wiki/Quadratic_formula">quadratic formula.</a>
+The upper bound/root is equivalent to `time-lower`, and therefore the entirety of
+valid durations falls in the range `time-2*lower+1`.
+
+<CodeBox names="typescript|C#">
+
+```js
+export function partOne(input: string[]): number | string {
+  const times = input[0].matchAll(/\d+/g).map((x) => parseInt(x[0]))
+  const distances = input[1]
+    .matchAll(/\d+/g)
+    .map((x) => parseInt(x[0]))
+    .toArray()
+
+  return times.reduce(
+    (total, time, index) => findQuadraticRange(time, distances[index]) * total,
+    1
+  )
+}
+
+function findQuadraticRange(time: number, distance: number) {
+  const lowerBound = Math.floor(
+    0.5 * (time - Math.sqrt(time ** 2 - 4 * distance)) + 1
+  )
+  return time - lowerBound * 2 + 1
+}
+```
+
+```csharp
+public override object PartOne()
+{
+    int[] times = GetNumbers().Matches(Input[0]).Select(x => int.Parse(x.Value)).ToArray();
+    int[] distances = GetNumbers().Matches(Input[1]).Select(x => int.Parse(x.Value)).ToArray();
+
+    var solProduct = 1;
+
+    for (int i = 0; i < times.Length; i++)
+    {
+        var time = times[i];
+        var targetDistance = distances[i];
+        var lowerMatch = (int)Math.Floor(0.5 * (time - Math.Sqrt(Math.Pow(time, 2) - 4 * targetDistance)) + 1);
+
+        solProduct *= (time - 2 * lowerMatch + 1);
+    }
+    return solProduct;
+}
+
+[GeneratedRegex(@"\d+")]
+private static partial Regex GetNumbers();
+```
+
+</CodeBox>
+
+## Part Two
+
+With a closed solution discovered in part one, this one is trivial. I was expecting a problem where the button instead increased acceleration!
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partTwo(input: string[]): number | string {
+  const time = parseInt(
+    input[0]
+      .matchAll(/\d+/g)
+      .map((x) => x[0])
+      .toArray()
+      .join('')
+  )
+  const distance = parseInt(
+    input[1]
+      .matchAll(/\d+/g)
+      .map((x) => x[0])
+      .toArray()
+      .join('')
+  )
+
+  return findQuadraticRange(time, distance)
+}
+```
+
+```csharp
+public override object PartTwo()
+{
+    int time = int.Parse(GetNumbers().Matches(Input[0]).Select(x => x.Value).Aggregate((x, y) => x + y));
+    long distance = long.Parse(GetNumbers().Matches(Input[1]).Select(x => x.Value).Aggregate((x, y) => x + y));
+
+    var lowerMatch = (int)Math.Floor(0.5 * (time - Math.Sqrt(Math.Pow(time, 2) - 4 * distance)) + 1);
+
+    return (time - 2 * lowerMatch + 1);
+}
+```
+
+</CodeBox>
