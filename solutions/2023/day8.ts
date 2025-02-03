@@ -1,102 +1,82 @@
 export function partOne(input: string[]): number | string {
-  const parsed = parse(input)
-  const antinodes = new Map<number, Set<number>>()
+  const { directions, graph } = parse(input)
+  let steps = 0
+  let position = 'AAA'
+  let directionIndex = 0
 
-  parsed.forEach((antennaeType) => {
-    antennaeType.forEach((antenna, index) => {
-      antennaeType.slice(index + 1).forEach((ant, i) => {
-        findAntinodes(antinodes, antenna, ant, input[0].length, input.length)
-      })
-    })
-  })
-  return antinodes
-    .keys()
-    .reduce((total, key) => total + antinodes.get(key)!.size, 0)
+  while (position != 'ZZZ') {
+    const direction = directions[directionIndex]
+    position =
+      direction == 'L' ? graph.get(position)![0] : graph.get(position)![1]
+    steps++
+    directionIndex =
+      directionIndex == directions.length - 1 ? 0 : directionIndex + 1
+  }
+  return steps
 }
 
-function parse(input: string[]): Map<string, number[][]> {
-  const result = new Map<string, number[][]>()
-  input.forEach((line, y) => {
-    line.split('').forEach((c, x) => {
-      if (c != '.') {
-        if (!result.has(c)) result.set(c, [[x, y]])
-        else result.get(c)?.push([x, y])
-      }
-    })
+function parse(input: string[]): {
+  directions: string
+  graph: Map<string, string[]>
+} {
+  const directions = input[0]
+  const graph = new Map<string, string[]>()
+  input.slice(2).forEach((line) => {
+    const paths = [line.slice(7, 10), line.slice(12, 15)]
+    graph.set(line.slice(0, 3), paths)
   })
-  return result
-}
-
-function findAntinodes(
-  antinodes: Map<number, Set<number>>,
-  a: number[],
-  b: number[],
-  maxX: number,
-  maxY: number
-) {
-  let xDiff = a[0] - b[0]
-  let yDiff = a[1] - b[1]
-
-  ;[
-    [a[0] + xDiff, a[1] + yDiff],
-    [b[0] - xDiff, b[1] - yDiff],
-  ].forEach((x) => {
-    if (x[0] > -1 && x[0] < maxX && x[1] > -1 && x[1] < maxY) {
-      if (!antinodes.has(x[0])) antinodes.set(x[0], new Set<number>([x[1]]))
-      else antinodes.get(x[0])?.add(x[1])
-    }
-  })
+  return { directions, graph }
 }
 
 export function partTwo(input: string[]): number | string {
-  const parsed = parse(input)
-  const antinodes = new Map<number, Set<number>>()
+  const { directions, graph } = parse(input)
+  let loops = [...graph.keys().filter((x) => x.endsWith('A'))].map((x) =>
+    findLoop(graph, x, directions)
+  )
+  const factors = new Set<number>()
+  const g = gcd(loops[0], loops[1])
+  factors.add(g)
+  loops.forEach((loopLength) => factors.add(loopLength / g))
 
-  parsed.forEach((antennaeType) => {
-    antennaeType.forEach((antenna, index) => {
-      antennaeType.slice(index + 1).forEach((ant, i) => {
-        findHarmonicAntinodes(
-          antinodes,
-          antenna,
-          ant,
-          input[0].length,
-          input.length
-        )
-      })
-    })
-  })
-  return antinodes
-    .keys()
-    .reduce((total, key) => total + antinodes.get(key)!.size, 0)
+  return factors.values().reduce((total, x) => x * total, 1)
 }
 
-function findHarmonicAntinodes(
-  antinodes: Map<number, Set<number>>,
-  a: number[],
-  b: number[],
-  maxX: number,
-  maxY: number
+function findLoop(
+  graph: Map<string, string[]>,
+  position: string,
+  directions: string
 ) {
-  let xDiff = a[0] - b[0]
-  let yDiff = a[1] - b[1]
+  const travelled = new Map<string, number[]>([[position, [0]]])
+  let steps = 0
+  let directionIndex = 0
 
-  let x = a[0]
-  let y = a[1]
+  while (true) {
+    const direction = directions[directionIndex]
+    position =
+      direction == 'L' ? graph.get(position)![0] : graph.get(position)![1]
+    steps++
+    directionIndex =
+      directionIndex == directions.length - 1 ? 0 : directionIndex + 1
 
-  while (x > -1 && x < maxX && y > -1 && y < maxY) {
-    if (!antinodes.has(x)) antinodes.set(x, new Set<number>([y]))
-    else antinodes.get(x)?.add(y)
-    x = x + xDiff
-    y = y + yDiff
+    const been = travelled.get(position)
+    if (!been) travelled.set(position, [steps])
+    else travelled.set(position, [...been, steps])
+
+    if (been) {
+      if (
+        been[been.length - 1] % directions.length ==
+        steps % directions.length
+      )
+        return been[been.length - 1]
+    }
   }
+}
 
-  x = a[0]
-  y = a[1]
-
-  while (x > -1 && x < maxX && y > -1 && y < maxY) {
-    if (!antinodes.has(x)) antinodes.set(x, new Set<number>([y]))
-    else antinodes.get(x)?.add(y)
-    x = x - xDiff
-    y = y - yDiff
+function gcd(a: number, b: number): number {
+  while (b != 0) {
+    let t = b
+    b = a % b
+    a = t
   }
+  return a
 }

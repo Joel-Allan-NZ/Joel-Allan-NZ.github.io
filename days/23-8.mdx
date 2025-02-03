@@ -1,0 +1,228 @@
+---
+year: 2023
+puzz: 8
+title: Haunted Wasteland
+---
+
+## Part One
+
+Parse the input, build a basic adjacency list, and traverse it according to the given directions until you reach the end point. Alarmingly simple, always a red flag for what you might expect for part 2
+
+<CodeBox names="typescript|C#">
+
+```js
+export function partOne(input: string[]): number | string {
+  const { directions, graph } = parse(input)
+  let steps = 0
+  let position = 'AAA'
+  let directionIndex = 0
+
+  while (position != 'ZZZ') {
+    const direction = directions[directionIndex]
+    position =
+      direction == 'L' ? graph.get(position)![0] : graph.get(position)![1]
+    steps++
+    directionIndex =
+      directionIndex == directions.length - 1 ? 0 : directionIndex + 1
+  }
+  return steps
+}
+
+function parse(input: string[]): {
+  directions: string
+  graph: Map<string, string[]>
+} {
+  const directions = input[0]
+  const graph = new Map<string, string[]>()
+  input.slice(2).forEach((line) => {
+    const paths = [line.slice(7, 10), line.slice(12, 15)]
+    graph.set(line.slice(0, 3), paths)
+  })
+  return { directions, graph }
+}
+```
+
+```csharp
+public override object PartOne()
+{
+    var (directions, graph) = Parse();
+    int steps = 0;
+    string position = "AAA";
+
+    while (position != "ZZZ")
+    {
+        foreach (var direction in directions)
+        {
+            position = direction == 'L' ? graph[position][0] : graph[position][1];
+            steps++;
+            if (position == "ZZZ")
+                break;
+        }
+    }
+    return steps;
+}
+
+private (string directions, Dictionary<string, string[]> graph) Parse()
+{
+    string directions = Input[0];
+    Dictionary<string, string[]> graph = [];
+    for (int i = 2; i < Input.Length; i++)
+    {
+        graph[Input[i][0..3]] = [Input[i][7..10], Input[i][12..15]];
+    }
+    return (directions, graph);
+}
+```
+
+</CodeBox>
+
+## Part Two
+
+Ahhh, here we go.
+
+<br />
+First things first, I need to outline a couple assumptions (knowing that this isn't
+a real world problem) that I've made in my solution in order to keep it simple:{' '}
+
+- Paths only contain one end. This makes sense based on having as many ends as starts, and my input validates the
+  assumption... but it is only an assumption. YMMV
+
+- Longest path loops share a _single_
+  GCD. This isn't necessarily true, but the result could be veeeeery big if it isn't.
+  True for my input at least.
+
+- Loop lengths have only two meaningful factors: the GCD,
+  and a prime number. It makes sense, and holds true for my input.
+
+<br />
+
+With that housekeeping done, I can talk a little about my approach. The idea here
+is that each of the A starts will have their own path, looping to a Z point after
+a consistent number of steps. So, I find those loop lengths.
+
+<br />
+Armed with these lengths, all we need to do is find the smallest number that has
+each loop length as a factor. I do this pretty lazily: for the first pair of loops,
+I find the
+<a href="https://en.wikipedia.org/wiki/Greatest_common_divisor">GCD</a> via the
+<a href="https://en.wikipedia.org/wiki/Euclidean_algorithm">Euclidian</a>
+algorithm. As discussed above, I make the assumption that this single GCD will hold
+true for all loop lengths, so I simply take the GCD + the other factor for each loop
+length. Then I take the product of all of those factors, yielding the
+<a href="https://en.wikipedia.org/wiki/Least_common_multiple">LCM</a>, our
+answer.
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partTwo(input: string[]): number | string {
+  const { directions, graph } = parse(input)
+  let loops = [...graph.keys().filter((x) => x.endsWith('A'))].map((x) =>
+    findLoop(graph, x, directions)
+  )
+  const factors = new Set<number>()
+  const g = gcd(loops[0], loops[1])
+  factors.add(g)
+  loops.forEach((loopLength) => factors.add(loopLength / g))
+
+  return factors.values().reduce((total, x) => x * total, 1)
+}
+
+function findLoop(
+  graph: Map<string, string[]>,
+  position: string,
+  directions: string
+) {
+  const travelled = new Map<string, number[]>([[position, [0]]])
+  let steps = 0
+  let directionIndex = 0
+
+  while (true) {
+    const direction = directions[directionIndex]
+    position =
+      direction == 'L' ? graph.get(position)![0] : graph.get(position)![1]
+    steps++
+    directionIndex =
+      directionIndex == directions.length - 1 ? 0 : directionIndex + 1
+
+    const been = travelled.get(position)
+    if (!been) travelled.set(position, [steps])
+    else travelled.set(position, [...been, steps])
+
+    if (been) {
+      if (
+        been[been.length - 1] % directions.length ==
+        steps % directions.length
+      )
+        return been[been.length - 1]
+    }
+  }
+}
+
+function gcd(a: number, b: number): number {
+  while (b != 0) {
+    let t = b
+    b = a % b
+    a = t
+  }
+  return a
+}
+```
+
+```csharp
+public override object PartTwo()
+{
+    var (directions, graph) = Parse();
+    var positions = graph.Keys.Where(key => key.EndsWith('A')).ToList();
+    var loops = positions.Select(x => FindLoop(graph, x, directions)).ToList();
+
+    HashSet<long> factors = [];
+    var gcd = GCD(loops[0], loops[1]);
+    factors.Add(gcd);
+    foreach (var loop in loops)
+        factors.Add(loop / gcd);
+
+    return factors.Aggregate((x, y) => x * y);
+}
+
+private static long FindLoop(Dictionary<string, string[]> graph, string start, string directions)
+{
+    Dictionary<string, List<long>> appearancesOnSteps = [];
+    appearancesOnSteps[start] = [0];
+    int dIndex = 0;
+    long steps = 0;
+
+    while (true)
+    {
+        steps++;
+        start = directions[dIndex] == 'L' ? graph[start][0] : graph[start][1];
+        dIndex = dIndex == directions.Length - 1 ? 0 : dIndex + 1;
+
+        if (appearancesOnSteps.TryGetValue(start, out var s))
+            s.Add(steps);
+        else
+            appearancesOnSteps[start] = [steps];
+
+        if (appearancesOnSteps[start].Count > 1)
+        {
+            if (appearancesOnSteps[start][^1] % directions.Length == appearancesOnSteps[start][^2] % directions.Length)
+            {
+                return appearancesOnSteps[start][^2];
+            }
+        }
+    }
+}
+
+private static long GCD(long a, long b)
+{
+    while (b != 0)
+    {
+        var t = b;
+        b = a % b;
+        a = t;
+    }
+    return a;
+}
+```
+
+</CodeBox>
