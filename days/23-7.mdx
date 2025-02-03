@@ -1,0 +1,238 @@
+---
+year: 2023
+puzz: 7
+title: Camel Cards
+---
+
+## Part One
+
+Cards Time.
+
+<br />
+We need to be able to identify hand values, and also compare hands of the same type.
+Not too much to think about here, just diligence in making sure we evaluate hands
+correctly.
+
+I opted to compute the hand values before sorting to avoid recalculating each hand value when compared. There's some bleed over from part 2 in this solution, but it didn't make sense to duplicate the entirety of the process.
+
+<CodeBox names="typescript|C#">
+
+```js
+export function partOne(input: string[]): number | string {
+  const hands = input.map((x) => {
+    let matches = x.split(' ')
+    return {
+      cards: matches[0],
+      handValue: findHandType(matches[0], false),
+      bid: parseInt(matches[1]),
+    }
+  })
+  console.log(hands)
+  hands.sort((x, y) => compareHandValue(x, y, false))
+  return hands.reduce((total, hand, index) => hand.bid * (index + 1) + total, 0)
+}
+
+interface CamelCardHand {
+  cards: string
+  handValue: number
+  bid: number
+}
+
+function compareHandValue(
+  x: CamelCardHand,
+  y: CamelCardHand,
+  joker: boolean
+): number {
+  if (x.handValue != y.handValue) return x.handValue - y.handValue
+
+  for (let i = 0; i < x.cards.length; i++) {
+    if (x.cards[i] != y.cards[i])
+      return cardValue(x.cards[i], joker) - cardValue(y.cards[i], joker)
+  }
+  return 0
+}
+
+function cardValue(card: string, joker: boolean): number {
+  switch (card) {
+    case 'A':
+      return 14
+    case 'K':
+      return 13
+    case 'Q':
+      return 12
+    case 'J':
+      return joker ? 0 : 11
+    case 'T':
+      return 10
+    default:
+      return parseInt(card)
+  }
+}
+
+function findHandType(hand: string, joker: boolean): number {
+  const counted = new Map<string, number>()
+  let max = 1
+  hand.split('').forEach((c) => {
+    let d = counted.get(c)
+    if (d) {
+      counted.set(c, d + 1)
+      max = d + 1 > max ? d + 1 : max
+    } else counted.set(c, 1)
+  })
+
+  if (joker && counted.get('J'))
+    return findHandTypeJoker(counted.size, max, counted.get('J')!)
+
+  switch (counted.size) {
+    case 1:
+      return 7
+    case 2:
+      return counted.values().find((x) => x == 2 || x == 3) ? 5 : 6
+    case 3:
+      return max == 3 ? 4 : 3
+    case 4:
+      return 2
+    default:
+      return 1
+  }
+}
+```
+
+```csharp
+public override object PartOne()
+{
+    var comparer = new CamelHandComparer();
+    List<(string hand, int bid, HandType handType)> hands = [.. Input.Select(x => x.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+                                                                     .Select(x => (hand: x[0], bid: int.Parse(x[1]), handType: FindHandType(x[0])))
+                                                                     .Order(comparer)];
+    long sum = 0;
+    for (int i = 0; i < hands.Count; i++)
+        sum += (i + 1) * hands[i].bid;
+
+    return sum;
+}
+
+public static HandType FindHandType(string a, bool joker = false)
+{
+    var counted = new Dictionary<char, int>();
+    foreach (char ch in a)
+    {
+        if (counted.TryGetValue(ch, out var value))
+            counted[ch] = value + 1;
+        else
+            counted.Add(ch, 1);
+    }
+
+    if (joker && counted.TryGetValue('J', out var jokers))
+        return FindHandTypeJoker(counted.Keys.Count, counted.Values.Max(), jokers);
+
+    return counted.Keys.Count switch
+    {
+        1 => HandType.FiveOfAKind,
+        2 => counted.First().Value == 2 || counted.First().Value == 3 ? HandType.FullHouse : HandType.FourOfAKind,
+        3 => counted.Values.Max() == 3 ? HandType.ThreeOfAKind : HandType.TwoPair,
+        4 => HandType.OnePair,
+        _ => HandType.HighCard
+    };
+}
+
+internal enum HandType
+{
+    FiveOfAKind, FourOfAKind, FullHouse, ThreeOfAKind, TwoPair, OnePair, HighCard
+}
+
+internal class CamelHandComparer(bool joker = false) : IComparer<(string hand, int bid, HandType handType)>
+{
+    readonly bool Joker = joker;
+    public int Compare((string hand, int bid, HandType handType) x, (string hand, int bid, HandType handType) y)
+    {
+        if (x.handType != y.handType)
+            return y.handType - x.handType;
+
+        for (int i = 0; i < x.hand.Length; i++)
+        {
+            if (x.hand[i] == y.hand[i])
+                continue;
+            return CardValue(x.hand[i]) - CardValue(y.hand[i]);
+        }
+        return 0;
+    }
+
+    private int CardValue(char c) => c switch
+            {
+                'A' => 14,
+                'K' => 13,
+                'Q' => 12,
+                'J' => Joker ? 0 : 11,
+                'T' => 10,
+                _ => int.Parse(c.ToString())
+            };
+}
+```
+
+</CodeBox>
+
+## Part Two
+
+As the previous part of the solution no doubt suggested: we now also have jokers. A small tweak to the value of a J and how hand values are calculated are required, but nothing taxing.
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partTwo(input: string[]): number | string {
+  const hands = input.map((x) => {
+    let matches = x.split(' ')
+    return {
+      cards: matches[0],
+      handValue: findHandType(matches[0], true),
+      bid: parseInt(matches[1]),
+    }
+  })
+  hands.sort((x, y) => compareHandValue(x, y, true))
+  console.log(hands)
+  return hands.reduce((total, hand, index) => hand.bid * (index + 1) + total, 0)
+}
+
+function findHandTypeJoker(
+  keyCount: number,
+  maxCount: number,
+  jokers: number
+): number {
+  switch (keyCount) {
+    case 1:
+    case 2:
+      return 7
+    case 3:
+      return jokers == 1 && maxCount < 3 ? 5 : 6
+    case 4:
+      return jokers == 2 || maxCount == 2 ? 4 : 2
+    default:
+      return 2
+  }
+}
+```
+
+```csharp
+public override object PartTwo()
+{
+    var comparer = new CamelHandComparer(true);
+    List<(string hand, int bid, HandType handType)> hands = [.. Input.Select(x => x.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+                                                                     .Select(x => (hand: x[0], bid: int.Parse(x[1]), handType: FindHandType(x[0], true)))
+                                                                     .Order(comparer)];
+    long sum = 0;
+    for (int i = 0; i < hands.Count; i++)
+        sum += (i + 1) * hands[i].bid;
+
+    return sum;
+}
+
+public static HandType FindHandTypeJoker(int keyCount, int maxCount, int jokers) => keyCount switch
+{
+    < 3 => HandType.FiveOfAKind,
+    3 => jokers == 1 && maxCount < 3 ? HandType.FullHouse : HandType.FourOfAKind,
+    4 => jokers == 2 || maxCount == 2 ? HandType.ThreeOfAKind : HandType.OnePair,
+    _ => HandType.OnePair
+};
+```
+
+</CodeBox>
