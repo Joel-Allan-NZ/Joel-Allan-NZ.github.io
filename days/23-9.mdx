@@ -1,0 +1,98 @@
+---
+year: 2023
+puzz: 9
+title: Mirage Maintenance
+---
+
+## Part One
+
+A very long description to the problem, but it tells you _exactly_ how to solve it. Purely a speed exercise.
+
+<CodeBox names="typescript|C#">
+
+```js
+export function partOne(input: string[]): number | string {
+  return input.reduce((total, line) => {
+    const split = line.split(' ').map((x) => parseInt(x))
+    const differences = zeroOutHistory(split)
+    return (
+      total +
+      differences.reduce((last, current) => last + current.slice(-1)[0], 0)
+    )
+  }, 0)
+}
+
+function zeroOutHistory(history: number[]): number[][] {
+  const differences: number[][] = [history]
+
+  while (differences.slice(-1)[0].some((x) => x != 0)) {
+    const last = differences.slice(-1)[0]
+    const next: number[] = []
+    last.slice(1).forEach((item, index) => next.push(item - last[index]))
+    differences.push(next)
+  }
+  console.log(differences)
+  return differences.reverse()
+}
+```
+
+```csharp
+public override object PartOne()
+{
+    return Input.Sum(line =>
+    {
+        var split = line.Split(' ').Select(x => int.Parse(x)).ToList();
+        var differences = ZeroOutHistory(split);
+        return differences.Aggregate(0, (x, y) => x + y[^1]);
+    });
+}
+
+private static List<List<int>> ZeroOutHistory(List<int> history)
+{
+    List<List<int>> differences = [history];
+
+    while (differences[^1].Any(x => x != 0))
+    {
+        var last = differences.Last();
+        List<int> next = [];
+        for (int i = 1; i < last.Count; i++)
+            next.Add(last[i] - last[i - 1]);
+
+        differences.Add(next);
+    }
+    differences.Reverse();
+    return differences;
+}
+```
+
+</CodeBox>
+
+## Part Two
+
+The same thing, but backwards. The only alteration is to change how each new value is calculated by switching some addition to subtraction. All about being quick in order to make the leaderboard.
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partTwo(input: string[]): number | string {
+  return input.reduce((total, line) => {
+    const split = line.split(' ').map((x) => parseInt(x))
+    const differences = zeroOutHistory(split)
+    return total + differences.reduce((last, current) => current[0] - last, 0)
+  }, 0)
+}
+```
+
+```csharp
+public override object PartTwo()
+{
+    return Input.Sum(line =>
+    {
+        var split = line.Split(' ').Select(x => int.Parse(x)).ToList();
+        var differences = ZeroOutHistory(split);
+        return differences.Aggregate(0, (x, y) => y[0] - x);
+    });
+}
+```
+
+</CodeBox>
