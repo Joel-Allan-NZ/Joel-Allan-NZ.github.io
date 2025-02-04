@@ -1,84 +1,218 @@
 export function partOne(input: string[]): number | string {
-  const trails = parse(input)
-  const trailHeads = trails.flatMap((row) =>
-    row.filter((col) => col.value == 0)
-  )
+  const { start, connections, coords } = parse(input)
+  const loop = exploreLoop(connections, start)
 
-  return trailHeads.reduce(
-    (total, head) =>
-      total + findNines(trails, head, new Map<number, Set<number>>()),
-    0
-  )
+  return loop
+    .values()
+    .reduce((max, current) => (current > max ? current : max), 0)
 }
 
-function findNines(
-  trails: Node[][],
-  current: Node,
-  nines: Map<number, Set<number>>
-) {
-  current.edges.forEach((edge) => {
-    const node = trails[edge[0]][edge[1]]
-    if (node.value == 9) {
-      if (!nines.has(node.y)) nines.set(node.y, new Set<number>([node.x]))
-      else nines.get(node.y)?.add(node.x)
-    } else findNines(trails, node, nines)
-  })
-
-  return nines.keys().reduce((t, y) => nines.get(y)!.size + t, 0)
-}
-
-interface Node {
-  value: number
-  edges: number[][]
+interface Coord {
   x: number
   y: number
 }
 
-function parse(input: string[]): Node[][] {
-  const trailMap: Node[][] = []
+function parse(input: string[]): {
+  start: Coord
+  connections: Map<number, number[]>
+  coords: Map<number, Coord>
+} {
+  const start: Coord = { x: 0, y: 0 }
+  const possibleConnections = new Map<number, number[]>()
+  const coords = new Map<number, Coord>()
+
   input.forEach((line, y) => {
-    trailMap.push([])
-    line.split('').forEach((val, x) => {
-      trailMap[y].push({ value: parseInt(val), edges: [], x, y })
+    line.split('').forEach((c, x) => {
+      possibleConnections.set(
+        coordToNumber({ x, y }),
+        neighbours(x, y, c).map((coord) => coordToNumber(coord))
+      )
 
-      if (y != 0) {
-        if (trailMap[y - 1][x].value == trailMap[y][x].value + 1)
-          trailMap[y][x].edges.push([y - 1, x])
-        else if (trailMap[y - 1][x].value == trailMap[y][x].value - 1)
-          trailMap[y - 1][x].edges.push([y, x])
-      }
-
-      if (x != 0) {
-        if (trailMap[y][x - 1].value == trailMap[y][x].value + 1)
-          trailMap[y][x].edges.push([y, x - 1])
-        else if (trailMap[y][x - 1].value == trailMap[y][x].value - 1)
-          trailMap[y][x - 1].edges.push([y, x])
+      if (c == 'S') {
+        start.x = x
+        start.y = y
       }
     })
   })
-  return trailMap
+
+  const connections = new Map<number, number[]>()
+
+  possibleConnections.keys().forEach((key) => {
+    connections.set(
+      key,
+      possibleConnections
+        .get(key)!
+        .filter(
+          (n) =>
+            possibleConnections.has(n) &&
+            possibleConnections.get(n)!.includes(key)
+        )
+    )
+  })
+  return { start, connections, coords }
+}
+
+function coordToNumber(coord: Coord): number {
+  return coord.x * 100000 + coord.y
+}
+
+function numberToCoord(number: number): Coord {
+  return {
+    x: Math.floor(number / 100000),
+    y: number % 100000,
+  }
+}
+
+function neighbours(x: number, y: number, c: string): Coord[] {
+  switch (c) {
+    case '|':
+      return [
+        { x, y: y - 1 },
+        { x, y: y + 1 },
+      ]
+    case '-':
+      return [
+        { x: x - 1, y },
+        { x: x + 1, y },
+      ]
+    case 'L':
+      return [
+        { x, y: y - 1 },
+        { x: x + 1, y },
+      ]
+    case 'J':
+      return [
+        { x, y: y - 1 },
+        { x: x - 1, y },
+      ]
+    case '7':
+      return [
+        { x, y: y + 1 },
+        { x: x - 1, y },
+      ]
+    case 'F':
+      return [
+        { x, y: y + 1 },
+        { x: x + 1, y },
+      ]
+    case 'S':
+      return [
+        { x, y: y + 1 },
+        { x: x + 1, y },
+        { x: x - 1, y },
+        { x, y: y - 1 },
+      ]
+    default:
+      return []
+  }
+}
+
+function exploreLoop(
+  graph: Map<number, number[]>,
+  start: Coord
+): Map<number, number> {
+  const toVisit = [coordToNumber(start)]
+  const distances = new Map<number, number>()
+  distances.set(toVisit[0], 0)
+
+  while (toVisit.length > 0) {
+    var current = toVisit.shift()!
+    graph.get(current)?.forEach((neighbour) => {
+      if (!distances.has(neighbour)) {
+        distances.set(neighbour, distances.get(current)! + 1)
+        toVisit.push(neighbour)
+      }
+    })
+  }
+  return distances
 }
 
 export function partTwo(input: string[]): number | string {
-  const trails = parse(input)
-  const trailHeads = trails.flatMap((row) =>
-    row.filter((col) => col.value == 0)
-  )
+  const { start, connections, coords } = parse(input)
+  const loop = exploreLoop(connections, start)
+  const loopKeys = new Set<number>([...loop.keys()])
 
-  return trailHeads.reduce((total, head) => {
-    let score = 0
-    const toVisit: Node[] = [head]
+  const locationStatus = new Map<number, boolean>()
 
-    while (toVisit.length > 0) {
-      const current = toVisit.shift()
+  connections.keys().forEach((key) => {
+    if (!loop.has(key) && !locationStatus.has(key)) {
+      const { positions, enclosed } = findGroundStatus(
+        connections,
+        loopKeys,
+        key,
+        input
+      )
 
-      current!.edges.forEach((edge) => {
-        const node = trails[edge[0]][edge[1]]
-        if (node.value == 9) score++
-        else toVisit.push(node)
+      positions.forEach((position) => {
+        if (connections.has(position) && !loopKeys.has(position))
+          locationStatus.set(position, enclosed)
+        else locationStatus.set(position, false)
       })
     }
+  })
+  return locationStatus
+    .values()
+    .reduce((total, current) => (current ? total + 1 : total), 0)
+}
 
-    return score + total
-  }, 0)
+function findGroundStatus(
+  connections: Map<number, number[]>,
+  loop: Set<number>,
+  position: number,
+  input: string[]
+): { positions: Set<number>; enclosed: boolean } {
+  const positions = new Set<number>([position])
+  const toExplore = [numberToCoord(position)]
+  let enclosed = true
+  let haveSeenLoop = false
+
+  while (toExplore.length > 0) {
+    const currentCoord = toExplore.shift()!
+    const current = coordToNumber(currentCoord)
+
+    if (connections.has(current)) {
+      if (loop.has(current)) haveSeenLoop = true
+      if (
+        currentCoord.x == input[0].length - 1 ||
+        currentCoord.y == input.length - 1
+      )
+        enclosed = false
+
+      findNextAccessibleTiles(connections, current).forEach((next) => {
+        const nextNumber = coordToNumber(next)
+        if (!positions.has(nextNumber)) {
+          toExplore.push(next)
+          positions.add(nextNumber)
+        }
+      })
+    } else enclosed = false
+  }
+
+  return { positions, enclosed: haveSeenLoop && enclosed }
+}
+
+function findNextAccessibleTiles(
+  connections: Map<number, number[]>,
+  position: number
+): Coord[] {
+  const { x, y } = numberToCoord(position)
+  const next: Coord[] = []
+  let current = connections.get(position)
+
+  if (current) {
+    if (!current.includes(coordToNumber({ x: x + 1, y })))
+      next.push({ x, y: y - 1 })
+    if (!current.includes(coordToNumber({ x, y: y + 1 })))
+      next.push({ x: x - 1, y })
+  }
+
+  current = connections.get(coordToNumber({ x, y: y + 1 }))
+  if (current && !current.includes(coordToNumber({ x: x + 1, y: y + 1 })))
+    next.push({ x, y: y + 1 })
+
+  current = connections.get(coordToNumber({ x: x + 1, y }))
+  if (current && !current.includes(coordToNumber({ x: x + 1, y: y + 1 })))
+    next.push({ x: x + 1, y })
+
+  return next
 }

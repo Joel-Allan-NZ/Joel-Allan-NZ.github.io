@@ -1,0 +1,424 @@
+---
+year: 2023
+puzz: 10
+title: Pipe Maze
+---
+
+## Part One
+
+Much like yesterday we're greeted with a very long problem summary. Part one boils down to parsing the data and using it to create a valid adjacency graph, then traversing that graph to find the most distant point from the start. I opted for a basic <a href="https://en.wikipedia.org/wiki/Breadth-first_search">breadth first search.</a> Nothing fancy; gets the job done.
+
+<CodeBox names="typescript|C#">
+
+```js
+export function partOne(input: string[]): number | string {
+  const { start, connections, coords } = parse(input)
+  const loop = exploreLoop(connections, start)
+
+  return loop
+    .values()
+    .reduce((max, current) => (current > max ? current : max), 0)
+}
+
+interface Coord {
+  x: number
+  y: number
+}
+
+function parse(input: string[]): {
+  start: Coord
+  connections: Map<number, number[]>
+  coords: Map<number, Coord>
+} {
+  const start: Coord = { x: 0, y: 0 }
+  const possibleConnections = new Map<number, number[]>()
+  const coords = new Map<number, Coord>()
+
+  input.forEach((line, y) => {
+    line.split('').forEach((c, x) => {
+      possibleConnections.set(
+        coordToNumber({ x, y }),
+        neighbours(x, y, c).map((coord) => coordToNumber(coord))
+      )
+
+      if (c == 'S') {
+        start.x = x
+        start.y = y
+      }
+    })
+  })
+
+  const connections = new Map<number, number[]>()
+
+  possibleConnections.keys().forEach((key) => {
+    connections.set(
+      key,
+      possibleConnections
+        .get(key)!
+        .filter(
+          (n) =>
+            possibleConnections.has(n) &&
+            possibleConnections.get(n)!.includes(key)
+        )
+    )
+  })
+  return { start, connections, coords }
+}
+
+function coordToNumber(coord: Coord): number {
+  return coord.x * 100000 + coord.y
+}
+
+function numberToCoord(number: number): Coord {
+  return {
+    x: Math.floor(number / 100000),
+    y: number % 100000,
+  }
+}
+
+function neighbours(x: number, y: number, c: string): Coord[] {
+  switch (c) {
+    case '|':
+      return [
+        { x, y: y - 1 },
+        { x, y: y + 1 },
+      ]
+    case '-':
+      return [
+        { x: x - 1, y },
+        { x: x + 1, y },
+      ]
+    case 'L':
+      return [
+        { x, y: y - 1 },
+        { x: x + 1, y },
+      ]
+    case 'J':
+      return [
+        { x, y: y - 1 },
+        { x: x - 1, y },
+      ]
+    case '7':
+      return [
+        { x, y: y + 1 },
+        { x: x - 1, y },
+      ]
+    case 'F':
+      return [
+        { x, y: y + 1 },
+        { x: x + 1, y },
+      ]
+    case 'S':
+      return [
+        { x, y: y + 1 },
+        { x: x + 1, y },
+        { x: x - 1, y },
+        { x, y: y - 1 },
+      ]
+    default:
+      return []
+  }
+}
+
+function exploreLoop(
+  graph: Map<number, number[]>,
+  start: Coord
+): Map<number, number> {
+  const toVisit = [coordToNumber(start)]
+  const distances = new Map<number, number>()
+  distances.set(toVisit[0], 0)
+
+  while (toVisit.length > 0) {
+    var current = toVisit.shift()!
+    graph.get(current)?.forEach((neighbour) => {
+      if (!distances.has(neighbour)) {
+        distances.set(neighbour, distances.get(current)! + 1)
+        toVisit.push(neighbour)
+      }
+    })
+  }
+  return distances
+}
+```
+
+```csharp
+public override object PartOne()
+{
+    var (start, pipes) = Parse();
+
+    return ExploreLoop(pipes, start).Max(x => x.Value);
+}
+
+private static Dictionary<(int x, int y), int> ExploreLoop(Dictionary<(int x, int y), List<(int x, int y)>> pipes, (int x, int y) start)
+{
+    Queue<(int x, int y)> toVisit = [];
+    toVisit.Enqueue(start);
+    Dictionary<(int x, int y), int> distances = [];
+    distances.Add(start, 0);
+
+    while (toVisit.Count > 0)
+    {
+        var current = toVisit.Dequeue();
+        foreach (var neighbour in pipes[current])
+        {
+            if (distances.TryGetValue(neighbour, out var distance))
+                continue;
+
+            distances.Add(neighbour, distances[current] + 1);
+            toVisit.Enqueue(neighbour);
+        }
+    }
+    return distances;
+}
+
+private ((int x, int y) start, Dictionary<(int x, int y), List<(int x, int y)>> pipes) Parse()
+{
+    var start = (x: 0, y: 0);
+    Dictionary<(int x, int y), (int x, int y)[]> possibleConnections = [];
+    for (int y = 0; y < Input.Length; y++)
+    {
+        for (int x = 0; x < Input[y].Length; x++)
+        {
+            possibleConnections.Add((x, y), Neighbours(x, y, Input[y][x]));
+
+            if (Input[y][x] == 'S')
+                start = (x, y);
+        }
+    }
+
+    Dictionary<(int x, int y), List<(int x, int y)>> confirmedConnections = [];
+
+    foreach (var pipe in possibleConnections)
+    {
+        var possibleNeighbours = pipe.Value.Where(n => possibleConnections.TryGetValue(n, out var neighbours) &&
+                                                    neighbours.Contains(pipe.Key))
+                                           .ToList();
+        confirmedConnections.Add(pipe.Key, possibleNeighbours);
+    }
+    return (start, confirmedConnections);
+}
+
+private static (int x, int y)[] Neighbours(int x, int y, char c) => c switch
+{
+    '|' => [(x, y - 1), (x, y + 1)],
+    '-' => [(x - 1, y), (x + 1, y)],
+    'L' => [(x, y - 1), (x + 1, y)],
+    'J' => [(x, y - 1), (x - 1, y)],
+    '7' => [(x, y + 1), (x - 1, y)],
+    'F' => [(x, y + 1), (x + 1, y)],
+    'S' => [(x, y + 1), (x + 1, y), (x - 1, y), (x, y - 1)],
+    _ => []
+};
+```
+
+</CodeBox>
+
+## Part Two
+
+This was a little bit trickier, and required some thinking.
+
+<br />
+The core idea is to find tiles entirely enclosed by the loop, with the added problem
+of being able to 'squeeze' between adjacent pipes that aren't connected. One approach
+that should be immediately obvious is to double the area, and create new nodes/edges
+to represent squeezable paths. However, that approach comes with an equally obvious
+downside: tracking how many tiles are 'real' vs expanded seems like a headache.
+<br />
+I opted for a different but equally fiddly approach, where I didn't increase the
+area but instead created a new set of rules for traversing squeezable space. For
+this I consider the current position as being at the bottom right corner of a tile,
+and being able to squeeze as if you were on that side of it. All spaces that aren't
+enclosed should either be able to navigate via squeezing to an edge of the map (and
+therefore they can't be enclosed), or be part of a space that isn't adjacent to the
+loop.
+<br />
+Notice a logical error there? What about spaces that are adjacent to the loop, but
+can't squeeze out to a side due to some other non-loop blockage? The simple answer
+is... I made an assumption that such a structure wouldn't exist in the input, and
+was proved correct (for my input at least). If it fails for you, then now you know
+a possible reason why (and it should be a pretty trivial fix)!
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partTwo(input: string[]): number | string {
+  const { start, connections, coords } = parse(input)
+  const loop = exploreLoop(connections, start)
+  const loopKeys = new Set<number>([...loop.keys()])
+
+  const locationStatus = new Map<number, boolean>()
+
+  connections.keys().forEach((key) => {
+    if (!loop.has(key) && !locationStatus.has(key)) {
+      const { positions, enclosed } = findGroundStatus(
+        connections,
+        loopKeys,
+        key,
+        input
+      )
+
+      positions.forEach((position) => {
+        if (connections.has(position) && !loopKeys.has(position))
+          locationStatus.set(position, enclosed)
+        else locationStatus.set(position, false)
+      })
+    }
+  })
+  return locationStatus
+    .values()
+    .reduce((total, current) => (current ? total + 1 : total), 0)
+}
+
+function findGroundStatus(
+  connections: Map<number, number[]>,
+  loop: Set<number>,
+  position: number,
+  input: string[]
+): { positions: Set<number>; enclosed: boolean } {
+  const positions = new Set<number>([position])
+  const toExplore = [numberToCoord(position)]
+  let enclosed = true
+  let haveSeenLoop = false
+
+  while (toExplore.length > 0) {
+    const currentCoord = toExplore.shift()!
+    const current = coordToNumber(currentCoord)
+
+    if (connections.has(current)) {
+      if (loop.has(current)) haveSeenLoop = true
+      if (
+        currentCoord.x == input[0].length - 1 ||
+        currentCoord.y == input.length - 1
+      )
+        enclosed = false
+
+      findNextAccessibleTiles(connections, current).forEach((next) => {
+        const nextNumber = coordToNumber(next)
+        if (!positions.has(nextNumber)) {
+          toExplore.push(next)
+          positions.add(nextNumber)
+        }
+      })
+    } else enclosed = false
+  }
+
+  return { positions, enclosed: haveSeenLoop && enclosed }
+}
+
+function findNextAccessibleTiles(
+  connections: Map<number, number[]>,
+  position: number
+): Coord[] {
+  const { x, y } = numberToCoord(position)
+  const next: Coord[] = []
+  let current = connections.get(position)
+
+  if (current) {
+    if (!current.includes(coordToNumber({ x: x + 1, y })))
+      next.push({ x, y: y - 1 })
+    if (!current.includes(coordToNumber({ x, y: y + 1 })))
+      next.push({ x: x - 1, y })
+  }
+
+  current = connections.get(coordToNumber({ x, y: y + 1 }))
+  if (current && !current.includes(coordToNumber({ x: x + 1, y: y + 1 })))
+    next.push({ x, y: y + 1 })
+
+  current = connections.get(coordToNumber({ x: x + 1, y }))
+  if (current && !current.includes(coordToNumber({ x: x + 1, y: y + 1 })))
+    next.push({ x: x + 1, y })
+
+  return next
+}
+```
+
+```csharp
+public override object PartTwo()
+{
+    var (start, pipes) = Parse();
+    var loop = ExploreLoop(pipes, start).Keys.ToHashSet();
+
+
+    Dictionary<(int x, int y), bool> locationStatus = [];
+    foreach (var groundTile in pipes.Keys)
+    {
+        if (!loop.Contains(groundTile) && !locationStatus.ContainsKey(groundTile))
+        {
+            var (positions, enclosed) = FindGroundStatus(pipes, loop, groundTile);
+            foreach (var g in positions)
+            {
+                if (pipes.ContainsKey(g) && !loop.Contains(g))
+                    locationStatus.Add(g, enclosed);
+                else
+                    locationStatus.Add(g, false);
+            }
+        }
+    }
+    return locationStatus.Count(x => x.Value == true);
+}
+
+private (HashSet<(int x, int y)> positions, bool enclosed) FindGroundStatus(Dictionary<(int x, int y), List<(int x, int y)>> pipes, HashSet<(int x, int y)> loop, (int x, int y) position)
+{
+    HashSet<(int x, int y)> positions = [];
+    Queue<(int x, int y)> toExplore = [];
+    toExplore.Enqueue(position);
+    positions.Add(position);
+    bool enclosed = true;
+    bool haveSeenLoop = false;
+
+    while (toExplore.Count > 0)
+    {
+        var current = toExplore.Dequeue();
+
+        if (!pipes.ContainsKey(current))
+        {
+            enclosed = false;
+            continue;
+        }
+
+        if (loop.Contains(current))
+            haveSeenLoop = true;
+
+        if (current.x == Input[0].Length - 1 || current.y == Input.Length - 1)
+            enclosed = false;
+
+        foreach (var next in FindNextAccessibleTiles(pipes, current))
+        {
+            if (!positions.Contains(next))
+            {
+                toExplore.Enqueue(next);
+                positions.Add(next);
+            }
+        }
+    }
+
+    return (positions, haveSeenLoop && enclosed);
+}
+
+private static List<(int x, int y)> FindNextAccessibleTiles(Dictionary<(int x, int y), List<(int x, int y)>> pipes, (int x, int y) position)
+{
+    var (x, y) = position;
+    List<(int x, int y)> next = [];
+
+    if (pipes.TryGetValue((x, y), out var neighbours))
+    {
+        if (!neighbours.Contains((x + 1, y)))
+            next.Add((x, y - 1));
+
+        if (!neighbours.Contains((x, y + 1)))
+            next.Add((x - 1, y));
+    }
+
+    if (pipes.TryGetValue((x, y + 1), out neighbours))
+        if (!neighbours.Contains((x + 1, y + 1)))
+            next.Add((x, y + 1));
+
+    if (pipes.TryGetValue((x + 1, y), out neighbours))
+        if (!neighbours.Contains((x + 1, y + 1)))
+            next.Add((x + 1, y));
+
+    return next;
+}
+```
+
+</CodeBox>
