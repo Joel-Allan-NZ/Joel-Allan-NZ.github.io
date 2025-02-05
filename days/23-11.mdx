@@ -1,0 +1,167 @@
+---
+year: 2023
+puzz: 11
+title: Cosmic Expansion
+---
+
+## Part One
+
+Another speedy one. The input size isn't terribly big, so today was all about just speed-of-writing-code rather than code performance.
+
+<CodeBox names="typescript|C#">
+
+```js
+export function partOne(input: string[]): number | string {
+  let distance = 0
+  const galaxies = expandGalaxies(parse(input), input, 1)
+
+  galaxies.forEach((i, index) => {
+    distance += galaxies
+      .slice(index + 1)
+      .reduce(
+        (total, current) =>
+          total + Math.abs(current[0] - i[0]) + Math.abs(current[1] - i[1]),
+        0
+      )
+  })
+
+  return distance
+}
+
+function parse(input: string[]): Map<number, number[]> {
+  const galaxies = new Map<number, number[]>()
+
+  input.forEach((line, y) => {
+    line.split('').forEach((c, x) => {
+      if (c == '#') {
+        if (galaxies.has(y)) galaxies.get(y)!.push(x)
+        else galaxies.set(y, [x])
+      }
+    })
+  })
+  return galaxies
+}
+
+function expandGalaxies(
+  galaxies: Map<number, number[]>,
+  input: string[],
+  expandSize: number
+): number[][] {
+  var missingY: number[] = []
+  var missingX: number[] = []
+
+  for (let y = 0; y < input.length; y++) if (!galaxies.has(y)) missingY.push(y)
+
+  for (let x = 0; x < input[0].length; x++)
+    if (!galaxies.values().some((z) => z.includes(x))) missingX.push(x)
+
+  missingY.sort((x, y) => x - y)
+  missingX.sort((x, y) => x - y)
+
+  const effectiveCoords: number[][] = []
+
+  galaxies.keys().forEach((y) => {
+    let yIndex = missingY.findIndex((missing) => missing > y)
+    yIndex = yIndex == -1 ? missingY.length : yIndex
+    const realY = y + expandSize * yIndex
+
+    galaxies.get(y)!.forEach((x) => {
+      let xIndex = missingX.findIndex((missing) => missing > x)
+      xIndex = xIndex == -1 ? missingX.length : xIndex
+      effectiveCoords.push([realY, x + expandSize * xIndex])
+    })
+  })
+  return effectiveCoords
+}
+```
+
+```csharp
+public override object PartOne()
+{
+    long totalDistance = 0;
+    var galaxies = ExpandGalaxies(Parse(), 1);
+
+    for (int i = 0; i < galaxies.Count; i++)
+        totalDistance += galaxies.Skip(i + 1)
+                                         .Sum(x => Math.Abs(galaxies[i][0] - x[0]) + Math.Abs(galaxies[i][1] - x[1]));
+
+    return totalDistance;
+}
+
+private Dictionary<int, List<int>> Parse()
+{
+    Dictionary<int, List<int>> galaxies = [];
+    for (int y = 0; y < Input.Length; y++)
+    {
+        for (int x = 0; x < Input.Length; x++)
+        {
+            if (Input[y][x] == '#')
+            {
+                if (galaxies.TryGetValue(y, out var list))
+                    list.Add(x);
+                else
+                    galaxies.Add(y, [x]);
+            }
+        }
+    }
+    return galaxies;
+}
+
+private List<long[]> ExpandGalaxies(Dictionary<int, List<int>> galaxies, int expandSize)
+{
+    var missingY = Enumerable.Range(0, Input.Length).Where(y => !galaxies.ContainsKey(y));
+    var missingX = Enumerable.Range(0, Input[0].Length).Where(x => !galaxies.Values.Any(z => z.Contains(x)));
+
+    List<long[]> effectiveCoords = [];
+    foreach (var galaxy in galaxies)
+    {
+        var effectiveY = galaxy.Key + expandSize * missingY.Count(x => x < galaxy.Key);
+        foreach (var x in galaxy.Value)
+            effectiveCoords.Add([effectiveY, x + expandSize * missingX.Count(z => z < x)]);
+    }
+    return effectiveCoords;
+}
+```
+
+</CodeBox>
+
+## Part Two
+
+A bigger expansion size doesn't really matter for this one (unless for some reason you were actually adding rows/columns to the input), the one gotcha is that 1,000,000 times bigger is an increase of 999,999, not one million.
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partTwo(input: string[]): number | string {
+  let distance = 0
+  const galaxies = expandGalaxies(parse(input), input, 999999)
+
+  galaxies.forEach((i, index) => {
+    distance += galaxies
+      .slice(index + 1)
+      .reduce(
+        (total, current) =>
+          total + Math.abs(current[0] - i[0]) + Math.abs(current[1] - i[1]),
+        0
+      )
+  })
+
+  return distance
+}
+```
+
+```csharp
+public override object PartTwo()
+{
+    long totalDistance = 0;
+    var galaxies = ExpandGalaxies(Parse(), 999999);
+
+    for (int i = 0; i < galaxies.Count; i++)
+        totalDistance += galaxies.Skip(i + 1)
+                                 .Sum(x => Math.Abs(galaxies[i][0] - x[0]) + Math.Abs(galaxies[i][1] - x[1]));
+
+    return totalDistance;
+}
+```
+
+</CodeBox>
