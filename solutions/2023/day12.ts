@@ -1,95 +1,73 @@
 export function partOne(input: string[]): number | string {
-  var regions = parse(input)
-  return regions
-    .values()
-    .reduce(
-      (total, current) =>
-        total +
-        current.length * current.reduce((t, c) => t + 4 - c.Edges.length, 0),
-      0
+  const cache = new Map<string, number>()
+  let result = input.reduce((total, line) => {
+    var split = line.split(/ /)
+    split[0] = split[0].split(/\.+/).join('.')
+    return (
+      total +
+      findValidArrangements(
+        cache,
+        split[0],
+        split[1].split(/,/).map((x) => parseInt(x))
+      )
     )
+  }, 0)
+  return result
 }
 
-interface Node {
-  X: number
-  Y: number
-  C: string
-  Region: number
-  Edges: Node[]
+function findValidArrangements(
+  cache: Map<string, number>,
+  springs: string,
+  lengths: number[]
+): number {
+  const line = springs + ' ' + lengths.join(',')
+
+  let result = cache.get(line)
+  if (result) return result
+
+  if (lengths.length == 0) return springs.includes('#') ? 0 : 1
+  if (springs.length - lengths.reduce((a, b) => a + b) - lengths.length < -1)
+    return 0
+
+  const lengthFits = !springs.slice(0, lengths[0]).includes('.')
+  if (springs.length == lengths[0]) return lengthFits ? 1 : 0
+
+  return (cache[line] ??=
+    (springs[0] != '#'
+      ? findValidArrangements(cache, trimWorking(springs, 1), lengths)
+      : 0) +
+    (lengthFits && springs[lengths[0]] != '#'
+      ? findValidArrangements(
+          cache,
+          trimWorking(springs, lengths[0] + 1),
+          lengths.slice(1)
+        )
+      : 0))
 }
 
-function parse(input: string[]): Map<number, Node[]> {
-  const nodes: Node[] = []
-  let lastRow: Node[] = []
-  input.forEach((line, y) => {
-    const currentRow: Node[] = []
-    line.split('').forEach((c, x) => {
-      currentRow.push({ X: x, Y: y, C: c, Region: 0, Edges: [] })
-      nodes.push(currentRow[x])
-      if (x > 0 && currentRow[x - 1].C == c) {
-        currentRow[x - 1].Edges.push(currentRow[x])
-        currentRow[x].Edges.push(currentRow[x - 1])
-      }
-      if (y > 0 && lastRow[x].C == c) {
-        currentRow[x].Edges.push(lastRow[x])
-        lastRow[x].Edges.push(currentRow[x])
-      }
-    })
-    lastRow = currentRow
-  })
+function trimWorking(untrimmed: string, start: number) {
+  if (start >= untrimmed.length) return ''
 
-  let region = 1
-  nodes.forEach((node) => {
-    if (node.Region == 0) {
-      node.Region = region
-      region++
-      findRegion(node)
-    }
-  })
-  return Map.groupBy(nodes, (node) => node.Region)
-}
-
-function findRegion(node: Node) {
-  node.Edges.forEach((neighbour) => {
-    if (neighbour.Region == 0) {
-      neighbour.Region = node.Region
-      findRegion(neighbour)
-    }
-  })
+  return untrimmed[start] == '.'
+    ? untrimmed.slice(start + 1)
+    : untrimmed.slice(start)
 }
 
 export function partTwo(input: string[]): number | string {
-  var regions = parse(input)
+  const cache = new Map<string, number>()
 
-  return regions.values().reduce((total, region) => {
-    return (
-      total +
-      region.reduce((t, node) => t + region.length * countNodeVertices(node), 0)
+  let result = 0
+  for (const line of input) {
+    const [row, groups] = line
+      .split(' ')
+      .map((x, i) =>
+        i == 1 ? x.split(',').map((y) => parseInt(y)) : x.split(/\.+/).join('.')
+      )
+    result += findValidArrangements(
+      cache,
+      Array(5).fill(row).join('?'),
+      Array(5).fill(groups).flat()
     )
-  }, 0)
-}
-
-function countNodeVertices(node: Node): number {
-  if (node.Edges.length == 0) return 4
-  if (node.Edges.length == 1) return 2
-
-  const edgeCombinations = node.Edges.slice(0, -1).flatMap((edge, index) => {
-    return node.Edges.slice(index + 1).map((e) => [edge, e])
-  })
-
-  let outsideCorner = true
-  const pairSum = edgeCombinations.reduce((total, pair) => {
-    if (
-      (pair[0].X == pair[1].X && pair[1].X == node.X) ||
-      (pair[0].Y == pair[1].Y && pair[1].Y == node.Y)
-    )
-      outsideCorner = false
-    else {
-      let insideCorner =
-        pair[0].Edges.filter((e) => pair[1].Edges.includes(e)).length == 1
-      if (insideCorner) return total + 1
-    }
-    return total
-  }, 0)
-  return outsideCorner ? pairSum + 1 : pairSum
+  }
+  return result
 }

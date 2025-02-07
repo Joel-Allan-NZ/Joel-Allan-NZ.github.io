@@ -17,6 +17,7 @@ export default function TryYourself({
 
   const runPartOne = () => {
     setSolving(true)
+    setSolution('Thinking...')
     partOne(year, puzz, puzzleInput.split(/\r|\n/))
       .then((result) =>
         setSolution(() =>
@@ -34,6 +35,7 @@ export default function TryYourself({
   }
   const runPartTwo = () => {
     setSolving(true)
+    setSolution('Thinking...')
     partTwo(year, puzz, puzzleInput.split(/\r|\n/))
       .then((result) =>
         setSolution(() =>

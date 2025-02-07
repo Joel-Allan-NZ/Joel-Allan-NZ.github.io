@@ -51,6 +51,7 @@ function expandGalaxies(
     let yIndex = missingY.findIndex((missing) => missing > y)
     yIndex = yIndex == -1 ? missingY.length : yIndex
     const realY = y + expandSize * yIndex
+
     galaxies.get(y)!.forEach((x) => {
       let xIndex = missingX.findIndex((missing) => missing > x)
       xIndex = xIndex == -1 ? missingX.length : xIndex

@@ -1,0 +1,195 @@
+---
+year: 2023
+puzz: 12
+title: Hot Springs
+---
+
+## Part One
+
+This one's a bit trickier than the average!
+
+<br />
+I opted to approach it as a dynamic programming problem, memoizing the results of
+each problem and subproblem to minimize redundancy.
+<br />
+The actual function isn't complicated, but it is a little intimidating looking. There
+are several base cases:
+
+- If we've already found the result of an identical problem/sub-problem, then return it.
+- If there are no remaining groups (or lengths) of springs left, then it's either a valid solution (no remaining `#`), or not.
+- If the lengths of remaining groups/lengths + the required spaces between them are larger than the space remaining, then it's an invalid solution.
+- If the the remaining space is equal to the size of the last spring group, but the space contains a `.`, the solution is invalid. If it doesn't contain a `.`, then there's exactly one solution for this subproblem.
+
+With those cases covered, we can take the current space and break it down into subproblems to solve.
+The first possible sub-problem is the same spring space minus the first character (provided it isn't a `#` and therefore meaningful). The second is to consider the spring space less the length of the first group of broken springs. IE if you have `??????` and `3`, you can consider it to be `###???` and start examing `???` with the next group size.
+
+<br />
+Once you work your way through that, you have a solution!
+
+<CodeBox names="typescript|C#">
+
+```js
+export function partOne(input: string[]): number | string {
+  const cache = new Map<string, number>()
+  let result = input.reduce((total, line) => {
+    var split = line.split(/ /)
+    split[0] = split[0].split(/\.+/).join('.')
+    return (
+      total +
+      findValidArrangements(
+        cache,
+        split[0],
+        split[1].split(/,/).map((x) => parseInt(x))
+      )
+    )
+  }, 0)
+  return result
+}
+
+function findValidArrangements(
+  cache: Map<string, number>,
+  springs: string,
+  lengths: number[]
+): number {
+  const line = springs + ' ' + lengths.join(',')
+
+  let result = cache.get(line)
+  if (result) return result
+
+  if (lengths.length == 0) return springs.includes('#') ? 0 : 1
+  if (springs.length - lengths.reduce((a, b) => a + b) - lengths.length < -1)
+    return 0
+
+  const lengthFits = !springs.slice(0, lengths[0]).includes('.')
+  if (springs.length == lengths[0]) return lengthFits ? 1 : 0
+
+  return (cache[line] ??=
+    (springs[0] != '#'
+      ? findValidArrangements(cache, trimWorking(springs, 1), lengths)
+      : 0) +
+    (lengthFits && springs[lengths[0]] != '#'
+      ? findValidArrangements(
+          cache,
+          trimWorking(springs, lengths[0] + 1),
+          lengths.slice(1)
+        )
+      : 0))
+}
+
+function trimWorking(untrimmed: string, start: number) {
+  if (start >= untrimmed.length) return ''
+
+  return untrimmed[start] == '.'
+    ? untrimmed.slice(start + 1)
+}
+```
+
+```csharp
+public override object PartOne()
+{
+    Dictionary<string, long> cache = [];
+    return Parse().Sum(line => FindValidArrangements(cache, line.spring.Split('.').Aggregate((x, y) => x + '.' + y), line.lengthString, line.lengths));
+}
+
+private IEnumerable<(string spring, string lengthString, int[] lengths)> Parse()
+{
+    foreach (var line in Input)
+    {
+        var split = line.Split(' ');
+        yield return (split[0], split[1], split[1].Split(',').Select(x => int.Parse(x)).ToArray());
+    }
+}
+
+private IEnumerable<(string spring, string lengthString, int[] lengths)> ParseUnfolded()
+{
+    foreach (var line in Input)
+    {
+        var split = line.Split(' ');
+        List<string> fiveSplit0 = [split[0], split[0], split[0], split[0], split[0]];
+        split[0] = fiveSplit0.Aggregate((x, y) => x + "?" + y);
+        List<string> fiveSplit1 = [split[1], split[1], split[1], split[1], split[1]];
+        split[1] = fiveSplit1.Aggregate((x, y) => x + ',' + y);
+
+        yield return (split[0], split[1], split[1].Split(',').Select(x => int.Parse(x)).ToArray());
+    }
+}
+
+private static long FindValidArrangements(Dictionary<string, long> cache, string springs, string lengthString, int[] lengths)
+{
+    if (cache.TryGetValue(springs + lengthString, out var cached))
+        return cached;
+
+    if (lengths.Length == 0)
+        return springs.Contains('#') ? 0 : 1;
+
+    if (springs.Length - lengths.Sum() - lengths.Length < -1)
+        return 0;
+
+    bool lengthFits = !springs[0..lengths[0]].Contains('.');
+
+    if (springs.Length == lengths[0])
+        return lengthFits ? 1 : 0;
+
+    var afterLengthString = lengthString.Length < 3 ? "" : lengths[0] < 10 ? lengthString[2..] : lengthString[3..];
+    var result = 0L;
+
+    if (springs[0] != '#')
+        result += FindValidArrangements(cache, TrimWorking(springs, 1), lengthString, lengths);
+
+    if (lengthFits && springs[lengths[0]] != '#')
+        result += FindValidArrangements(cache, TrimWorking(springs, lengths[0] + 1), afterLengthString, lengths[1..]);
+
+    cache[springs + lengthString] = result;
+    return result;
+}
+
+private static string TrimWorking(string untrimmed, int start)
+{
+    if (start >= untrimmed.Length)
+        return "";
+
+    return untrimmed[start] == '.' ? untrimmed[(start + 1)..] : untrimmed[start..];
+}
+```
+
+</CodeBox>
+
+## Part Two
+
+The same problem, but on a bigger scale. The repetition of elements makes the memoization even more important, significantly reducing the amount of recursion required.
+
+<br/>
+I typically make sure to use `Map<Tkey,TValue>.set()` for type-safety, but I cheat a little in this typescript solution in order to use a null coalescing assignment `??=`. The performance gains in this particular example were staggering (but difficult to explain). There's something tricky going on under the hood with how the assignment is made, but it's a problem for another day.
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partTwo(input: string[]): number | string {
+  const cache = new Map<string, number>()
+
+  let result = 0
+  for (const line of input) {
+    const [row, groups] = line
+      .split(' ')
+      .map((x, i) =>
+        i == 1 ? x.split(',').map((y) => parseInt(y)) : x.split(/\.+/).join('.')
+      )
+    result += findValidArrangements(
+      cache,
+      Array(5).fill(row).join('?'),
+      Array(5).fill(groups).flat()
+    )
+  }
+  return result
+}
+```
+
+```csharp
+public override object PartTwo()
+{
+    Dictionary<string, long> cache = [];
+    return ParseUnfolded().Sum(line => FindValidArrangements(cache, line.spring.Split('.').Aggregate((x, y) => x + '.' + y), line.lengthString, line.lengths));
+}
+```
+
+</CodeBox>
