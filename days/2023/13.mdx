@@ -1,0 +1,188 @@
+---
+year: 2023
+puzz: 13
+title: Point of Incidence
+---
+
+## Part One
+
+The solution code has been modified to suit part 2, but the core idea is pretty simple: check each column (and then each row) for a reflection by checking rows/columns equally distant from a potential reflection for equality.
+
+<br />
+You *could* use string equality comparisons for the rows, but part 2 causes issues
+there.
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partOne(input: string[]): number | string {
+  const maps = parse(input)
+  return maps.reduce(
+    (total, map) =>
+      total +
+      (findVerticalReflection(map) ?? findHorizontalReflection(map)! * 100),
+    0
+  )
+}
+
+function parse(input: string[]): string[][] {
+  const read: string[][] = [[]]
+  input.forEach((line) => {
+    if (line != '') {
+      read[read.length - 1].push(line)
+    } else read.push([])
+  })
+  return read
+}
+
+function findVerticalReflection(
+  map: string[],
+  flawTarget: number = 0
+): number | undefined {
+  for (let x = 1; x < map[0].length; x++) {
+    const distance = Math.min(map[0].length - x, x)
+    let mirrorPosition: number | undefined = x
+    let flaws = 0
+
+    for (let j = 0; j < distance; j++) {
+      for (let line of map) {
+        if (line[x - j - 1] != line[x + j]) {
+          if (++flaws > flawTarget) break
+        }
+      }
+      if (flaws > flawTarget) break
+    }
+    if (flaws == flawTarget) return mirrorPosition
+  }
+}
+
+function findHorizontalReflection(
+  map: string[],
+  flawTarget: number = 0
+): number | undefined {
+  for (let y = 1; y < map.length; y++) {
+    let flaws = 0
+    const distance = Math.min(map.length - y, y)
+    let mirrorPosition: number | undefined = y
+
+    for (let j = 0; j < distance; j++) {
+      for (let x = 0; x < map[0].length; x++) {
+        if (map[y + j][x] != map[y - j - 1][x]) {
+          if (++flaws > flawTarget) break
+        }
+      }
+      if (flaws > flawTarget) break
+    }
+    if (flaws == flawTarget) return mirrorPosition
+  }
+}
+```
+
+```csharp
+public override object PartOne()
+{
+    var maps = Parse();
+    return maps.Sum(map => FindVerticalReflection(map) ?? FindHorizontalReflection(map) * 100 ?? 0);
+}
+
+private List<List<string>> Parse()
+{
+    List<List<string>> maps = [[]];
+    foreach (var line in Input)
+    {
+        if (string.IsNullOrEmpty(line))
+        {
+            maps.Add([]);
+            continue;
+        }
+        maps[^1].Add(line);
+    }
+    return maps;
+}
+
+private static int? FindVerticalReflection(List<string> map, int flawLimit = 0)
+{
+    for (int x = 1; x < map[0].Length; x++)
+    {
+        int? mirrorPosition = x;
+        int flaws = 0;
+        var distance = Math.Min(map[0].Length - x, x);
+
+        for (int j = 0; j < distance; j++)
+        {
+            foreach (var line in map)
+            {
+                if (line[x - j - 1] != line[x + j])
+                {
+                    if (++flaws > flawLimit)
+                        break;
+                }
+            }
+            if (flaws > flawLimit)
+                break;
+        }
+        if (flaws == flawLimit)
+            return mirrorPosition;
+    }
+    return null;
+}
+
+private static int? FindHorizontalReflection(List<string> map, int flawLimit = 0)
+{
+    for (int y = 1; y < map.Count; y++)
+    {
+        int flaws = 0;
+        int distance = Math.Min(map.Count - y, y);
+        int? mirrorPosition = y;
+
+        for (int j = 0; j < distance; j++)
+        {
+            for (int x = 0; x < map[0].Length; x++)
+            {
+                if (map[y + j][x] != map[y - j - 1][x])
+                {
+                    if (++flaws > flawLimit)
+                        break;
+                }
+            }
+            if (flaws > flawLimit)
+                break;
+        }
+        if (flaws == flawLimit)
+            return mirrorPosition;
+    }
+    return null;
+}
+```
+
+</CodeBox>
+
+## Part Two
+
+Valid reflections are now required to have a single flaw. The code is identical to the changes I made to part 1, and as we only consider reflections with a single flaw we don't need to first explicitly eliminate the part 1 reflections as valid options.
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partTwo(input: string[]): number | string {
+  const maps = parse(input)
+  return maps.reduce(
+    (total, map) =>
+      total +
+      (findVerticalReflection(map, 1) ??
+        findHorizontalReflection(map, 1)! * 100),
+    0
+  )
+}
+```
+
+```csharp
+public override object PartTwo()
+{
+    var maps = Parse();
+    return maps.Sum(map => FindVerticalReflection(map, 1) ?? FindHorizontalReflection(map, 1) * 100 ?? 0);
+}
+
+```
+
+</CodeBox>

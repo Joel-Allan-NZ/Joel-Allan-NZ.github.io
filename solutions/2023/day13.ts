@@ -1,57 +1,72 @@
 export function partOne(input: string[]): number | string {
-  const games = parse(input, 0)
-
-  return games.reduce((total, game) => total + findIntersection(game), 0)
+  const maps = parse(input)
+  return maps.reduce(
+    (total, map) =>
+      total +
+      (findVerticalReflection(map) ?? findHorizontalReflection(map)! * 100),
+    0
+  )
 }
 
-interface Game {
-  a: { x: number; y: number }
-  b: { x: number; y: number }
-  x: number
-  y: number
-}
-
-function findIntersection(game: Game): number {
-  const numerator = game.a.y * game.x - game.a.x * game.y
-  const divisor = game.a.y * game.b.x - game.a.x * game.b.y
-
-  if (numerator % divisor != 0) return 0
-
-  let b = numerator / divisor
-  let remX = game.x - b * game.b.x
-
-  if (remX % game.a.x != 0) return 0
-
-  let a = remX / game.a.x
-
-  return a * 3 + b
-}
-
-function parse(input: string[], offset: number): Game[] {
-  const games: Game[] = []
-  let a: number[] = []
-  let b: number[] = []
-  input.forEach((line, index) => {
-    if (index % 4 == 0 && line.length > 0) {
-      a = line.split(/\+|\,/).map((x) => parseInt(x))
-    } else if (index % 4 == 1) b = line.split(/\+|\,/).map((x) => parseInt(x))
-    else if (index % 4 == 2) {
-      let s = line
-        .split(/\=|\,/)
-        .slice(1)
-        .map((x) => parseInt(x))
-      games.push({
-        a: { x: a[1], y: a[3] },
-        b: { x: b[1], y: b[3] },
-        x: s[0] + offset,
-        y: s[2] + offset,
-      })
-    }
+function parse(input: string[]): string[][] {
+  const read: string[][] = [[]]
+  input.forEach((line) => {
+    if (line != '') {
+      read[read.length - 1].push(line)
+    } else read.push([])
   })
-  return games
+  return read
+}
+
+function findVerticalReflection(
+  map: string[],
+  flawTarget: number = 0
+): number | undefined {
+  for (let x = 1; x < map[0].length; x++) {
+    const distance = Math.min(map[0].length - x, x)
+    let mirrorPosition: number | undefined = x
+    let flaws = 0
+
+    for (let j = 0; j < distance; j++) {
+      for (let line of map) {
+        if (line[x - j - 1] != line[x + j]) {
+          if (++flaws > flawTarget) break
+        }
+      }
+      if (flaws > flawTarget) break
+    }
+    if (flaws == flawTarget) return mirrorPosition
+  }
+}
+
+function findHorizontalReflection(
+  map: string[],
+  flawTarget: number = 0
+): number | undefined {
+  for (let y = 1; y < map.length; y++) {
+    let flaws = 0
+    const distance = Math.min(map.length - y, y)
+    let mirrorPosition: number | undefined = y
+
+    for (let j = 0; j < distance; j++) {
+      for (let x = 0; x < map[0].length; x++) {
+        if (map[y + j][x] != map[y - j - 1][x]) {
+          if (++flaws > flawTarget) break
+        }
+      }
+      if (flaws > flawTarget) break
+    }
+    if (flaws == flawTarget) return mirrorPosition
+  }
 }
 
 export function partTwo(input: string[]): number | string {
-  const games = parse(input, 10000000000000)
-  return games.reduce((total, game) => total + findIntersection(game), 0)
+  const maps = parse(input)
+  return maps.reduce(
+    (total, map) =>
+      total +
+      (findVerticalReflection(map, 1) ??
+        findHorizontalReflection(map, 1)! * 100),
+    0
+  )
 }
