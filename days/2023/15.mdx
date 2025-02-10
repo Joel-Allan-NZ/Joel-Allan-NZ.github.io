@@ -1,0 +1,127 @@
+---
+year: 2023
+puzz: 15
+title: Lens Library
+---
+
+## Part One
+
+Another day all about coding speed and not losing time to misunderstanding the requirements. All we have to do for part 1 is apply a basic hash function to the input string, one character at a time.
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partOne(input: string[]): number | string {
+  return input[0]
+    .split(',')
+    .reduce((total, current) => total + HASH(current), 0)
+}
+
+function HASH(s: string): number {
+  return s
+    .split('')
+    .reduce(
+      (total, char, index) => ((total + s.charCodeAt(index)) * 17) % 256,
+      0
+    )
+}
+```
+
+```csharp
+public override object PartOne()
+{
+    return Input[0].Split(',').Sum(x => HASHString(x));
+}
+
+private static int HASHString(string s)
+{
+    return Encoding.ASCII.GetBytes(s).Aggregate(0, (a, b) => ((a + b) * 17) % 256);
+}
+```
+
+</CodeBox>
+
+## Part Two
+
+Still all about speed here, just adding more requirements. The possible box count lends itself easily to using an array or similar collection, but I opted for a Dictionary/Map purely to avoid any unnecessary allocations. Not meaningful for this problem, just (a potentially bad) habit.
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partTwo(input: string[]): number | string {
+  const boxes = new Map<number, string[]>()
+
+  input[0].split(',').forEach((instruction) => {
+    const label =
+      instruction[instruction.length - 1] == '-'
+        ? instruction.slice(0, -1)
+        : instruction.slice(0, -2)
+
+    const hashed = HASH(label)
+
+    let box = boxes.get(hashed)
+    if (!box) {
+      box = []
+      boxes.set(hashed, box)
+    }
+
+    const index = box.findIndex((lens) => lens.slice(0, -1) == label)
+    if (instruction[instruction.length - 1] == '-') {
+      if (index != -1) box.splice(index, 1)
+    } else {
+      if (index == -1) box.push(label + instruction[instruction.length - 1])
+      else box[index] = label + instruction[instruction.length - 1]
+    }
+  })
+
+  return boxes.entries().reduce((total, box) => {
+    let index = 0
+    return (
+      total +
+      box[1].reduce((t, lens) => {
+        index++
+        return t + (box[0] + 1) * index * parseInt(lens[lens.length - 1])
+      }, 0)
+    )
+  }, 0)
+}
+```
+
+```csharp
+public override object PartTwo()
+{
+    Dictionary<int, List<string>> boxes = [];
+
+    foreach (var instruction in Input[0].Split(','))
+    {
+        var label = instruction[^1] == '-' ? instruction[0..^1] : instruction[0..^2];
+        var hashed = HASHString(label);
+        if (!boxes.TryGetValue(hashed, out var box))
+        {
+            box = [];
+            boxes[hashed] = box;
+        }
+        var index = box.FindIndex(x => x[0..^1] == label);
+
+        if (index == -1 && instruction[^2] == '=')
+            box.Add(label + instruction[^1]);
+        else if (instruction[^2] == '=')
+            box[index] = label + instruction[^1];
+        else if (index != -1)
+            box.RemoveAt(index);
+    }
+
+    return boxes.Sum(box =>
+    {
+        int index = 0;
+        return box.Value.Sum(lens =>
+        {
+            index++;
+            return (box.Key + 1)
+            * index * (lens[^1] - '0');
+        });
+    });
+}
+```
+
+</CodeBox>
