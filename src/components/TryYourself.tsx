@@ -44,11 +44,11 @@ export default function TryYourself({
             : result
         )
       )
-      .catch(() =>
-        setSolution(
-          'Something went wrong! Ensure you have the correct input and try again.'
-        )
-      )
+      // .catch(() =>
+      //   setSolution(
+      //     'Something went wrong! Ensure you have the correct input and try again.'
+      //   )
+      // )
       .finally(() => setSolving(false))
   }
 

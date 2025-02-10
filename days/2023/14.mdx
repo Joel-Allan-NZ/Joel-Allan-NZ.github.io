@@ -1,0 +1,235 @@
+---
+year: 2023
+puzz: 14
+title: Parabolic Reflector Dish
+---
+
+## Part One
+
+Nice and easy; purely reading the input and proving we can generate a value from it. Usually I refactor the first part when it could share code with part two, but with no need to actually manipulate the input here I opted not to.
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partOne(input: string[]): number | string {
+  let total = 0
+  for (let x = 0; x < input[0].length; x++) {
+    let end = 0
+    for (let y = 0; y < input.length; y++) {
+      if (input[y][x] == 'O') {
+        total += input.length - end
+        end++
+      } else if (input[y][x] == '#') end = y + 1
+    }
+  }
+  return total
+}
+```
+
+```csharp
+public override object PartOne()
+{
+    int total = 0;
+    for (int x = 0; x < Input[0].Length; x++)
+    {
+        int end = 0;
+        for (int y = 0; y < Input.Length; y++)
+        {
+            if (Input[y][x] == 'O')
+            {
+                total += Input.Length - end;
+                end++;
+            }
+            else if (Input[y][x] == '#')
+            {
+                end = y + 1;
+            }
+        }
+    }
+    return total;
+}
+```
+
+</CodeBox>
+
+## Part Two
+
+Phew, 1 billion spins is a lot.
+
+<br />
+
+But, such a large number of repetitions is a big hint that we're looking for a cycle. Unsurprisingly there are repeated positions quite early in to the billion spins. Once that cycle is discovered we can trivially determine the position after the billionth spin and calculate the load on the north support beams.
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partTwo(input: string[]): number | string {
+  const seen = new Map<string, number>()
+  let stones: string[][] = []
+  let cycles = 0
+  input.forEach((y) => stones.push(y.split('')))
+  const targetCycles = 1000000000
+  while (cycles < targetCycles) {
+    const stoneString = stones
+      .reduce((a, b) => a + ';' + b.join(''), '')
+      .slice(1)
+    const last = seen.get(stoneString)
+    seen.set(stoneString, cycles)
+
+    if (last) {
+      const index = ((targetCycles - last) % (cycles - last)) + last
+      stones = seen
+        .entries()
+        .find((x) => x[1] == index)![0]!
+        .split(';')
+        .map((x) => x.split(''))
+
+      break
+    }
+    vertical(stones, 1)
+    horizontal(stones, 1)
+    vertical(stones, -1)
+    horizontal(stones, -1)
+    cycles++
+  }
+
+  let total = 0
+  for (let x = 0; x < stones[0].length; x++)
+    for (let y = 0; y < stones.length; y++)
+      if (stones[y][x] == 'O') total += stones.length - y
+
+  return total
+}
+
+function vertical(stones: string[][], direction: number): void {
+  for (let x = 0; x < stones[0].length; x++) {
+    let end = direction == -1 ? stones.length - 1 : 0
+    let rowEnd = direction == -1 ? -1 : stones.length
+
+    for (let y = end; y != rowEnd; y += direction) {
+      if (stones[y][x] == 'O') {
+        if (end != y) {
+          stones[end][x] = 'O'
+          stones[y][x] = '.'
+        }
+        end += direction
+      } else if (stones[y][x] == '#') end = y + direction
+    }
+  }
+}
+
+function horizontal(stones: string[][], direction: number): void {
+  for (let y = 0; y < stones.length; y++) {
+    let end = direction == -1 ? stones.length - 1 : 0
+    let rowEnd = direction == -1 ? -1 : stones.length
+
+    for (let x = end; x != rowEnd; x += direction) {
+      if (stones[y][x] == 'O') {
+        if (end != x) {
+          stones[y][end] = 'O'
+          stones[y][x] = '.'
+        }
+        end += direction
+      } else if (stones[y][x] == '#') end = x + direction
+    }
+  }
+}
+```
+
+```csharp
+public override object PartTwo()
+{
+    Dictionary<string, int> seen = [];
+    char[][] stones = new char[Input.Length][];
+    int cycles = 0;
+
+    for (int y = 0; y < Input.Length; y++)
+        stones[y] = Input[y].ToCharArray();
+
+    while (cycles < 1_000_000_000)
+    {
+        var stoneString = stones.Aggregate("", (x, y) => x + ";" + new string(y))[1..];
+        if (seen.TryGetValue(stoneString, out var val))
+        {
+            var index = (1_000_000_000 - val) % (cycles - val) + val;
+            stones = seen.First(x => x.Value == index).Key
+                         .Split(';')
+                         .Select(x => x.ToCharArray())
+                         .ToArray();
+            break;
+        }
+        else
+            seen.Add(stoneString, cycles);
+
+        Vertical(stones, 1);
+        Horizontal(stones, 1);
+        Vertical(stones, -1);
+        Horizontal(stones, -1);
+        cycles++;
+    }
+
+    int total = 0;
+
+    for (int x = 0; x < stones[0].Length; x++)
+    {
+        for (int y = 0; y < stones.Length; y++)
+        {
+            if (stones[y][x] == 'O')
+                total += stones.Length - y;
+        }
+
+    }
+    return total;
+}
+
+private static void Vertical(char[][] stones, int direction)
+{
+    for (int x = 0; x < stones[0].Length; x++)
+    {
+        int end = direction == -1 ? stones.Length - 1 : 0;
+        int RowEnd = direction == -1 ? -1 : stones.Length;
+
+        for (int y = end; y != RowEnd; y += direction)
+        {
+            if (stones[y][x] == 'O')
+            {
+                if (end != y)
+                {
+                    stones[end][x] = 'O';
+                    stones[y][x] = '.';
+                }
+                end += direction;
+
+            }
+            else if (stones[y][x] == '#')
+                end = y + direction;
+        }
+    }
+}
+
+private static void Horizontal(char[][] stones, int direction)
+{
+    for (int y = 0; y < stones.Length; y++)
+    {
+        int end = direction == -1 ? stones[y].Length - 1 : 0;
+        int RowEnd = direction == -1 ? -1 : stones[y].Length;
+
+        for (int x = end; x != RowEnd; x += direction)
+        {
+            if (stones[y][x] == 'O')
+            {
+                if (end != x)
+                {
+                    stones[y][end] = 'O';
+                    stones[y][x] = '.';
+                }
+                end += direction;
+            }
+            else if (stones[y][x] == '#')
+                end = x + direction;
+        }
+    }
+}
+```
+
+</CodeBox>

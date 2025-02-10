@@ -1,87 +1,85 @@
 export function partOne(input: string[]): number | string {
-  const xSize = 101,
-    ySize = 103
-  const xMid = Math.floor(xSize / 2),
-    yMid = Math.floor(ySize / 2)
-  const robots = parse(input)
-  const quadrants = [0, 0, 0, 0]
-
-  robots.forEach((robot) => {
-    updateRobotPosition(robot, 100, xSize, ySize)
-    if (robot.x != xMid && robot.y != yMid) {
-      let quad = robot.x > xMid ? 1 : 0
-      if (robot.y > yMid) quad += 2
-      quadrants[quad]++
+  let total = 0
+  for (let x = 0; x < input[0].length; x++) {
+    let end = 0
+    for (let y = 0; y < input.length; y++) {
+      if (input[y][x] == 'O') {
+        total += input.length - end
+        end++
+      } else if (input[y][x] == '#') end = y + 1
     }
-  })
-
-  return quadrants.reduce((total, current) => total * current, 1)
-}
-
-interface BathroomRobot {
-  x: number
-  y: number
-  vx: number
-  vy: number
-}
-
-function parse(input: string[]): BathroomRobot[] {
-  return input.map((line) => {
-    const values = [...line.matchAll(/[-\d]+/g)].map((x) => parseInt(x[0]))
-
-    return { x: values[0], y: values[1], vx: values[2], vy: values[3] }
-  })
-}
-
-function updateRobotPosition(
-  robot: BathroomRobot,
-  steps: number,
-  xSize: number,
-  ySize: number
-) {
-  const finalX = robot.x + steps * robot.vx
-  const finalY = robot.y + steps * robot.vy
-
-  robot.x = finalX % xSize
-  robot.y = finalY % ySize
-
-  if (robot.x < 0) robot.x += xSize
-  if (robot.y < 0) robot.y += ySize
+  }
+  return total
 }
 
 export function partTwo(input: string[]): number | string {
-  const xSize = 101,
-    ySize = 103
-  const robots = parse(input)
-  let steps = 0
-  while (true) {
-    steps++
-    robots.forEach((robot) => updateRobotPosition(robot, 1, xSize, ySize))
-    if (hasContiguousRowOfSize(robots, 24)) return steps
+  const seen = new Map<string, number>()
+  let stones: string[][] = []
+  let cycles = 0
+  input.forEach((y) => stones.push(y.split('')))
+  const targetCycles = 1000000000
+  while (cycles < targetCycles) {
+    const stoneString = stones
+      .reduce((a, b) => a + ';' + b.join(''), '')
+      .slice(1)
+    const last = seen.get(stoneString)
+    seen.set(stoneString, cycles)
+
+    if (last) {
+      const index = ((targetCycles - last) % (cycles - last)) + last
+      stones = seen
+        .entries()
+        .find((x) => x[1] == index)![0]!
+        .split(';')
+        .map((x) => x.split(''))
+
+      break
+    }
+    vertical(stones, 1)
+    horizontal(stones, 1)
+    vertical(stones, -1)
+    horizontal(stones, -1)
+    cycles++
+  }
+
+  let total = 0
+  for (let x = 0; x < stones[0].length; x++)
+    for (let y = 0; y < stones.length; y++)
+      if (stones[y][x] == 'O') total += stones.length - y
+
+  return total
+}
+
+function vertical(stones: string[][], direction: number): void {
+  for (let x = 0; x < stones[0].length; x++) {
+    let end = direction == -1 ? stones.length - 1 : 0
+    let rowEnd = direction == -1 ? -1 : stones.length
+
+    for (let y = end; y != rowEnd; y += direction) {
+      if (stones[y][x] == 'O') {
+        if (end != y) {
+          stones[end][x] = 'O'
+          stones[y][x] = '.'
+        }
+        end += direction
+      } else if (stones[y][x] == '#') end = y + direction
+    }
   }
 }
 
-function hasContiguousRowOfSize(
-  robots: BathroomRobot[],
-  targetSize: number
-): boolean {
-  const positions = new Map<number, Set<number>>()
+function horizontal(stones: string[][], direction: number): void {
+  for (let y = 0; y < stones.length; y++) {
+    let end = direction == -1 ? stones.length - 1 : 0
+    let rowEnd = direction == -1 ? -1 : stones.length
 
-  robots.forEach((robot) => {
-    if (!positions.has(robot.y))
-      positions.set(robot.y, new Set<number>([robot.x]))
-    else positions.get(robot.y)?.add(robot.x)
-  })
-
-  return positions.values().some((row) => {
-    let contiguous = 0
-    if (row.size >= targetSize) {
-      row.values().forEach((x) => {
-        if (row.has(x + 1)) {
-          contiguous++
+    for (let x = end; x != rowEnd; x += direction) {
+      if (stones[y][x] == 'O') {
+        if (end != x) {
+          stones[y][end] = 'O'
+          stones[y][x] = '.'
         }
-      })
+        end += direction
+      } else if (stones[y][x] == '#') end = x + direction
     }
-    return contiguous >= targetSize
-  })
+  }
 }
