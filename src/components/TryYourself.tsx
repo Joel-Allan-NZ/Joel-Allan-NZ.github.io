@@ -1,6 +1,5 @@
 import React from 'react'
 import { partOne, partTwo } from '../../solutions/handler'
-import { isStringObject } from 'util/types'
 
 export default function TryYourself({
   year,
@@ -15,9 +14,8 @@ export default function TryYourself({
   )
   const [solving, setSolving] = React.useState(false)
 
-  const runPartOne = () => {
+  const runPartOne = async () => {
     setSolving(true)
-    setSolution('Thinking...')
     partOne(year, puzz, puzzleInput.split(/\r|\n/))
       .then((result) =>
         setSolution(() =>
@@ -33,23 +31,25 @@ export default function TryYourself({
       )
       .finally(() => setSolving(false))
   }
-  const runPartTwo = () => {
-    setSolving(true)
-    setSolution('Thinking...')
+
+  const runPartTwo = async () => {
+    setSolving(() => true)
     partTwo(year, puzz, puzzleInput.split(/\r|\n/))
-      .then((result) =>
+      .then((result) => {
         setSolution(() =>
           result == 0
             ? 'Either you tried to run a bad input, or the answer was 0'
             : result
         )
+      })
+      .catch(() =>
+        setSolution(
+          'Something went wrong! Ensure you have the correct input and try again.'
+        )
       )
-      // .catch(() =>
-      //   setSolution(
-      //     'Something went wrong! Ensure you have the correct input and try again.'
-      //   )
-      // )
-      .finally(() => setSolving(false))
+      .finally(() => {
+        setSolving(false)
+      })
   }
 
   return (

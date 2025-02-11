@@ -1,0 +1,201 @@
+---
+year: 2023
+puzz: 16
+title: The Floor Will Be Lava
+---
+
+## Part One
+
+[BFS](https://en.wikipedia.org/wiki/Breadth-first_search) with some rules about how nodes are connected. <br/>
+I opted not to manipulate the input to avoid complicating things - the BFS just walks along the cardinal directions, changing direction when required.
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partOne(input: string[]): number | string {
+  return countEnergizedTiles(0, 0, 1, input)
+}
+
+function countEnergizedTiles(
+  x: number,
+  y: number,
+  direction: number,
+  input: string[]
+): number {
+  const energizedTiles = new Set<number>()
+  const beamed = new Set<number>()
+  const beams: number[][] = []
+
+  energizedTiles.add(x * input.length + 1 + y)
+  beamed.add(x * input.length * 10 + y * 10 + direction)
+  beams.push([x, y, direction])
+
+  while (beams.length > 0) {
+    let beam = beams.pop()!
+    for (let next of nextBeamState(beam, input)) {
+      if (
+        next[1] > -1 &&
+        next[1] < input.length &&
+        next[0] > -1 &&
+        next[0] < input[next[1]].length
+      ) {
+        const beamedNumber =
+          next[0] * input.length * 10 + next[1] * 10 + next[2]
+        if (!beamed.has(beamedNumber)) {
+          energizedTiles.add(next[0] * input.length + 1 + next[1])
+          beams.push(next)
+          beamed.add(beamedNumber)
+        }
+      }
+    }
+  }
+  return energizedTiles.size
+}
+
+function nextBeamPosition(beam: number[], direction: number) {
+  return [
+    beam[0] + (direction == 1 ? 1 : direction == 3 ? -1 : 0),
+    beam[1] + (direction == 0 ? -1 : direction == 2 ? 1 : 0),
+    direction,
+  ]
+}
+
+function nextBeamState(beam: number[], input: string[]): number[][] {
+  const currentTile = input[beam[1]][beam[0]]
+  let direction = beam[2]
+
+  if (currentTile == '|' && (direction == 1 || direction == 3)) {
+    return [nextBeamPosition(beam, 2), nextBeamPosition(beam, 0)]
+  } else if (currentTile == '-' && (direction == 0 || direction == 2)) {
+    return [nextBeamPosition(beam, 1), nextBeamPosition(beam, 3)]
+  } else if (currentTile == '/') {
+    direction = direction % 2 == 0 ? (direction + 5) % 4 : (direction + 3) % 4
+  } else if (currentTile == '\\') {
+    direction = direction % 2 == 0 ? (direction + 3) % 4 : (direction + 5) % 4
+  }
+  return [nextBeamPosition(beam, direction)]
+}
+```
+
+```csharp
+public override object PartOne()
+{
+    return CountEnergizedTiles(0, 0, 1, Input);
+}
+
+private static int[][] NextBeamState(int[] beam, string[] input)
+{
+    char currentTile = input[beam[1]][beam[0]];
+    var direction = beam[2];
+
+    if (currentTile == '|' && (direction == 1 || direction == 3))
+    {
+        return [NextBeamPosition(beam, 2), NextBeamPosition(beam, 0)];
+    }
+    else if (currentTile == '-' && (direction == 0 || direction == 2))
+    {
+        return [NextBeamPosition(beam, 1), NextBeamPosition(beam, 3)];
+    }
+    else if (currentTile == '/')
+    {
+        direction = direction % 2 == 0 ? (direction + 5) % 4 : (direction + 3) % 4;
+    }
+    else if (currentTile == '\\')
+    {
+        direction = direction % 2 == 0 ? (direction + 3) % 4 : (direction + 5) % 4;
+    }
+    return [NextBeamPosition(beam, direction)];
+}
+
+private static int[] NextBeamPosition(int[] beam, int direction)
+{
+    return [beam[0] + (direction == 1 ? 1 : direction == 3 ? -1 : 0), beam[1] + (direction == 0 ? -1 : direction == 2 ? 1 : 0), direction];
+}
+
+private static int CountEnergizedTiles(int x, int y, int direction, string[] input)
+{
+    HashSet<int> energizedTiles = [];
+    HashSet<int> beamed = [];
+    Stack<int[]> beams = [];
+
+    energizedTiles.Add(x * input.Length + 1 + y);
+    beamed.Add(x * input.Length * 10 + y * 10 + direction);
+    beams.Push([x, y, direction]);
+
+    while (beams.Count > 0)
+    {
+        var beam = beams.Pop();
+        foreach (var next in NextBeamState(beam, input))
+        {
+            if (next[1] > -1 && next[1] < input.Length && next[0] > -1 && next[0] < input[next[1]].Length)
+            {
+                int beamedNumber = next[0] * input.Length * 10 + next[1] * 10 + next[2];
+                if (!beamed.Contains(beamedNumber))
+                {
+                    energizedTiles.Add(next[0] * input.Length + 1 + next[1]);
+                    beams.Push(next);
+                    beamed.Add(beamedNumber);
+                }
+            }
+        }
+    }
+    return energizedTiles.Count;
+}
+```
+
+</CodeBox>
+
+## Part Two
+
+The same thing, but more :). I played around with a few optimization approaches with various takes on memoization, but the truth is that brute-forcing it works just as quickly for me, and without adding a lot of complexity to the code (memoization is a little tricky here: beams split, which adds complexity to cycles etc).
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partTwo(input: string[]): number | string {
+  let max = 0
+
+  for (let y = 0; y < input.length; y++) {
+    let result = countEnergizedTiles(0, y, 1, input)
+    if (result > max) max = result
+    result = countEnergizedTiles(input[0].length - 1, y, 3, input)
+    if (result > max) max = result
+  }
+  for (let x = 0; x < input.length; x++) {
+    let result = countEnergizedTiles(x, 0, 2, input)
+    if (result > max) max = result
+    result = countEnergizedTiles(x, input.length - 1, 0, input)
+    if (result > max) max = result
+  }
+
+  return max
+}
+```
+
+```csharp
+public override object PartTwo()
+{
+    int max = 0;
+    for (int y = 0; y < Input.Length; y++)
+    {
+        var result = CountEnergizedTiles(0, y, 1, Input);
+        if (result > max)
+            max = result;
+        result = CountEnergizedTiles(Input[0].Length - 1, y, 3, Input);
+        if (result > max)
+            max = result;
+    }
+    for (int x = 0; x < Input[0].Length; x++)
+    {
+        var result = CountEnergizedTiles(x, 0, 2, Input);
+        if (result > max)
+            max = result;
+        result = CountEnergizedTiles(x, Input.Length - 1, 0, Input);
+        if (result > max)
+            max = result;
+    }
+    return max;
+}
+```
+
+</CodeBox>

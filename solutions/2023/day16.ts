@@ -1,182 +1,82 @@
 export function partOne(input: string[]): number | string {
-  const { graph, start, end } = parse(input)
-  findShortestPaths(graph, start)
-  return end.shortestPaths.reduce(
-    (min, current) => (min < current ? min : current),
-    2 ** 31
-  )
+  return countEnergizedTiles(0, 0, 1, input)
 }
 
-interface FacingNode {
-  c: string
-  edges: (FacingNode | null)[]
-  x: number
-  y: number
-  shortestPaths: number[]
-}
+function countEnergizedTiles(
+  x: number,
+  y: number,
+  direction: number,
+  input: string[]
+): number {
+  const energizedTiles = new Set<number>()
+  const beamed = new Set<number>()
+  const beams: number[][] = []
 
-function parse(input: string[]): {
-  graph: Map<number, Map<number, FacingNode>>
-  start: FacingNode
-  end: FacingNode
-} {
-  const graph = new Map<number, Map<number, FacingNode>>()
-  let pathMax = 2 ** 31
-  let end: FacingNode = {
-    c: 'a',
-    edges: [],
-    x: 1,
-    y: 1,
-    shortestPaths: [pathMax, pathMax, pathMax, pathMax],
-  }
-  let start: FacingNode = {
-    c: 'a',
-    edges: [],
-    x: 1,
-    y: 1,
-    shortestPaths: [1000, 0, 1000, 2000],
-  }
+  energizedTiles.add(x * input.length + 1 + y)
+  beamed.add(x * input.length * 10 + y * 10 + direction)
+  beams.push([x, y, direction])
 
-  input.forEach((line, y) => {
-    line.split('').forEach((c, x) => {
-      if (c != '#') {
-        let node: FacingNode = {
-          c,
-          edges: [null, null, null, null],
-          x,
-          y,
-          shortestPaths: [pathMax, pathMax, pathMax, pathMax],
-        }
-        if (c == 'E') end = node
-        else if (c == 'S') {
-          node = start
-          start.x = x
-          start.y = y
-        }
-        if (!graph.has(y)) graph.set(y, new Map<number, FacingNode>())
-        graph.get(y)?.set(x, node)
-        let left = graph.get(y)?.get(x - 1)
-        if (left) {
-          left.edges[1] = node
-          node.edges[3] = left
-        }
-        let top = graph.get(y - 1)?.get(x)
-        if (top) {
-          node.edges[0] = top
-          top.edges[2] = node
+  while (beams.length > 0) {
+    let beam = beams.pop()!
+    for (let next of nextBeamState(beam, input)) {
+      if (
+        next[1] > -1 &&
+        next[1] < input.length &&
+        next[0] > -1 &&
+        next[0] < input[next[1]].length
+      ) {
+        const beamedNumber =
+          next[0] * input.length * 10 + next[1] * 10 + next[2]
+        if (!beamed.has(beamedNumber)) {
+          energizedTiles.add(next[0] * input.length + 1 + next[1])
+          beams.push(next)
+          beamed.add(beamedNumber)
         }
       }
-    })
-  })
-  return { graph, start, end }
-}
-
-function findShortestPaths(
-  graph: Map<number, Map<number, FacingNode>>,
-  start: FacingNode
-): void {
-  const positions: FacingNode[] = [start]
-  while (positions.length > 0) {
-    let current = positions.shift()!
-    for (let i = 0; i < 4; i++) {
-      let neighbour = current.edges[i]
-      if (!neighbour) continue
-      let smaller = false
-      const minimums = getSmallestNextValues(
-        current?.shortestPaths,
-        neighbour.shortestPaths,
-        i
-      )
-      for (let j = 0; j < 4; j++) {
-        if (neighbour.shortestPaths[j] > minimums[j]) {
-          neighbour.shortestPaths[j] = minimums[j]
-          smaller = true
-        }
-      }
-      if (smaller) positions.push(neighbour)
     }
   }
+  return energizedTiles.size
 }
 
-function getSmallestNextValues(
-  costs: number[],
-  nextCosts: number[],
-  direction: number
-) {
-  const minimums = [2 ** 31, 2 ** 31, 2 ** 31, 2 ** 31]
-  const directionalCosts: number[][] = [
-    [direction, 0],
-    [(direction + 5) % 4, 1000],
-    [(direction + 6) % 4, 2000],
-    [(direction + 7) % 4, 1000],
+function nextBeamPosition(beam: number[], direction: number) {
+  return [
+    beam[0] + (direction == 1 ? 1 : direction == 3 ? -1 : 0),
+    beam[1] + (direction == 0 ? -1 : direction == 2 ? 1 : 0),
+    direction,
   ]
+}
 
-  let minCost = directionalCosts.reduce((min, current) => {
-    let currentValue = costs[current[0]] + 1 + current[1]
-    return min < currentValue ? min : currentValue
-  }, 2 ** 31)
+function nextBeamState(beam: number[], input: string[]): number[][] {
+  const currentTile = input[beam[1]][beam[0]]
+  let direction = beam[2]
 
-  if (minCost < nextCosts[direction]) {
-    minimums[direction] = minCost
-    directionalCosts.forEach((facing, cost) =>
-      minimums[facing[0]] > minimums[direction] + facing[1]
-        ? (minimums[facing[0]] = minimums[direction] + facing[1])
-        : null
-    )
-    return minimums
+  if (currentTile == '|' && (direction == 1 || direction == 3)) {
+    return [nextBeamPosition(beam, 2), nextBeamPosition(beam, 0)]
+  } else if (currentTile == '-' && (direction == 0 || direction == 2)) {
+    return [nextBeamPosition(beam, 1), nextBeamPosition(beam, 3)]
+  } else if (currentTile == '/') {
+    direction = direction % 2 == 0 ? (direction + 5) % 4 : (direction + 3) % 4
+  } else if (currentTile == '\\') {
+    direction = direction % 2 == 0 ? (direction + 3) % 4 : (direction + 5) % 4
   }
-  return nextCosts
+  return [nextBeamPosition(beam, direction)]
 }
 
 export function partTwo(input: string[]): number | string {
-  const { graph, start, end } = parse(input)
-  findShortestPaths(graph, start)
-  const allPaths = findAllPaths(end)
-  return allPaths.size
-}
+  let max = 0
 
-function findAllPaths(end: FacingNode): Set<FacingNode> {
-  let min = end.shortestPaths.reduce(
-    (min, current) => (min < current ? min : current),
-    2 ** 31
-  )
-  let minIndex = 0
-  while (end.shortestPaths[minIndex] != min) minIndex++
-  const paths = new Set<FacingNode>()
-  paths.add(end)
-  const process: { node: FacingNode; facing: number }[] = [
-    { node: end, facing: minIndex },
-  ]
-  while (process.length > 0) {
-    let current = process.shift()!
-    const prior = findPriorNeighbours(current.node, current?.facing)
-    prior.forEach((p) => {
-      if (!paths.has(p.node)) process.push(p)
-      paths.add(p.node)
-    })
+  for (let y = 0; y < input.length; y++) {
+    let result = countEnergizedTiles(0, y, 1, input)
+    if (result > max) max = result
+    result = countEnergizedTiles(input[0].length - 1, y, 3, input)
+    if (result > max) max = result
   }
-  return paths
-}
-
-function findPriorNeighbours(node: FacingNode, direction: number) {
-  const directionalCosts: number[][] = [
-    [direction, 1],
-    [(direction + 5) % 4, 1001],
-    [(direction + 6) % 4, 2001],
-    [(direction + 7) % 4, 1001],
-  ]
-  const res: { node: FacingNode; facing: number }[] = []
-
-  for (let i = 0; i < 4; i++) {
-    const edge = node.edges[directionalCosts[i][0]]
-    const opposite = directionalCosts[(i + 6) % 4]
-
-    if (
-      edge &&
-      edge.shortestPaths[opposite[0]] ==
-        node.shortestPaths[direction] - opposite[1]
-    )
-      res.push({ node: edge, facing: opposite[0] })
+  for (let x = 0; x < input.length; x++) {
+    let result = countEnergizedTiles(x, 0, 2, input)
+    if (result > max) max = result
+    result = countEnergizedTiles(x, input.length - 1, 0, input)
+    if (result > max) max = result
   }
-  return res
+
+  return max
 }

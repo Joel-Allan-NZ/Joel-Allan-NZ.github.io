@@ -9,6 +9,19 @@ export async function partOne(
   year = year.toString()
   day = day.toString()
 
+  return new Promise<number | string>((resolve) => {
+    setTimeout(() => {
+      // We fulfill the promise
+      resolve(resolvePartOne(year, day, input))
+    }, 0)
+  })
+}
+
+function resolvePartOne(
+  year: string,
+  day: string,
+  input: string[]
+): string | number {
   switch (year) {
     case '2024':
       return y2024.partOne(day, input)
@@ -27,6 +40,15 @@ export async function partTwo(
   year = year.toString()
   day = day.toString()
 
+  return new Promise<number | string>((resolve) => {
+    setTimeout(() => {
+      // We fulfill the promise
+      resolve(resolvePartTwo(year, day, input))
+    }, 0)
+  })
+}
+
+function resolvePartTwo(year: string, day: string, input: string[]) {
   switch (year) {
     case '2024':
       return y2024.partTwo(day, input)
