@@ -1,163 +1,132 @@
 export function partOne(input: string[]): number | string {
-  const { state, instructions } = parse(input)
-
-  while (
-    state.instructionPointer > -1 &&
-    state.instructionPointer < instructions.length - 1
-  )
-    operation(
-      instructions[state.instructionPointer],
-      instructions[state.instructionPointer + 1],
-      state
-    )
-
-  return state.output
+  return findPaths(input, 0, 3)
+}
+interface HeatNode {
+  x: number
+  y: number
+  value: number
+  from: number[]
 }
 
-interface State {
-  A: number
-  B: number
-  C: number
-  output: string
-  instructionPointer: number
-}
+function findPaths(
+  input: string[],
+  minSteps: number,
+  maxSteps: number
+): number {
+  const grid = heatGrid(input)
+  grid[0][0].from = [0, 0, 0, 0]
+  let future: { x: number; y: number; nextVertical: boolean }[] = []
+  getNextVertical(grid, grid[0][0], minSteps, maxSteps, future)
+  getNextHorizontal(grid, grid[0][0], minSteps, maxSteps, future)
 
-function parse(input: string[]): { state: State; instructions: number[] } {
-  const state: State = { A: 0, B: 0, C: 0, output: '', instructionPointer: 0 }
-  state.A = parseInt(input[0].match(/(\d+)/)![0])
-  state.B = parseInt(input[1].match(/(\d+)/)![0])
-  state.C = parseInt(input[2].match(/(\d+)/)![0])
-
-  const instructions = input[4]
-    .split(/[\, ]/)
-    .slice(1)
-    .map((x) => parseInt(x))
-  return { state, instructions }
-}
-
-function operation(opCode: number, operand: number, state: State) {
-  switch (opCode) {
-    case 0:
-      adv(comboOperand(operand, state), state)
-      break
-    case 1:
-      bxl(operand, state)
-      break
-    case 2:
-      bst(comboOperand(operand, state), state)
-      break
-    case 3:
-      jnz(operand, state)
-      break
-    case 4:
-      bxc(state)
-      break
-    case 5:
-      out(comboOperand(operand, state), state)
-      break
-    case 6:
-      bdv(comboOperand(operand, state), state)
-      break
-    case 7:
-      cdv(comboOperand(operand, state), state)
+  while (future.length > 0) {
+    const next = future
+    future = []
+    for (let state of next) {
+      if (state.nextVertical)
+        getNextVertical(
+          grid,
+          grid[state.y][state.x],
+          minSteps,
+          maxSteps,
+          future
+        )
+      else
+        getNextHorizontal(
+          grid,
+          grid[state.y][state.x],
+          minSteps,
+          maxSteps,
+          future
+        )
+    }
   }
-  if (opCode != 3) state.instructionPointer += 2
+  var last = grid[grid.length - 1][grid[0].length - 1]
+  return Math.min(last.from[0], last.from[1], last.from[2], last.from[3])
 }
 
-function comboOperand(operand: number, state: State): number {
-  switch (operand) {
-    case 4:
-      return state.A
-    case 5:
-      return state.B
-    case 6:
-      return state.C
-    default:
-      return operand
+function heatGrid(input: string[]): HeatNode[][] {
+  const grid: HeatNode[][] = []
+  const big = 2 ** 31
+  for (let y = 0; y < input.length; y++) {
+    grid.push([])
+    for (let x = 0; x < input[y].length; x++) {
+      grid[y].push({
+        x,
+        y,
+        value: parseInt(input[y][x]),
+        from: [big, big, big, big],
+      })
+    }
+  }
+  return grid
+}
+
+function getNextVertical(
+  grid: HeatNode[][],
+  origin: HeatNode,
+  minSteps: number,
+  maxSteps: number,
+  next: { x: number; y: number; nextVertical: boolean }[]
+): void {
+  let originDistance = Math.min(origin.from[1], origin.from[3])
+
+  for (let i = 1; i <= maxSteps; i++) {
+    if (origin.y - i < 0) break
+
+    let node = grid[origin.y - i][origin.x]
+    originDistance += node.value
+    if (i >= minSteps && node.from[2] > originDistance) {
+      next.push({ x: node.x, y: node.y, nextVertical: false })
+      node.from[2] = originDistance
+    }
+  }
+
+  originDistance = Math.min(origin.from[1], origin.from[3])
+
+  for (let i = 1; i <= maxSteps; i++) {
+    if (origin.y + i > grid.length - 1) break
+
+    let node = grid[origin.y + i][origin.x]
+    originDistance += node.value
+    if (i >= minSteps && node.from[0] > originDistance) {
+      next.push({ x: node.x, y: node.y, nextVertical: false })
+      node.from[0] = originDistance
+    }
   }
 }
 
-function adv(comboOperand: number, state: State) {
-  state.A = Math.floor(state.A / 2 ** comboOperand)
-}
-function bdv(comboOperand: number, state: State) {
-  state.B = Math.floor(state.A / 2 ** comboOperand)
-}
-function cdv(comboOperand: number, state: State) {
-  state.C = Math.floor(state.A / 2 ** comboOperand)
-}
-function bxl(operand: number, state: State) {
-  state.B ^= operand
-}
-function bst(comboOperand: number, state: State) {
-  state.B = comboOperand % 8
-}
-function jnz(operand: number, state: State) {
-  state.instructionPointer =
-    state.A == 0 ? state.instructionPointer + 2 : operand
-}
-function bxc(state: State) {
-  state.B ^= state.C
-}
-function out(comboOperand: number, state: State) {
-  state.output =
-    state.output.length > 0
-      ? `${state.output},${((comboOperand % 8) + 8) % 8}`
-      : `${((comboOperand % 8) + 8) % 8}`
+function getNextHorizontal(
+  grid: HeatNode[][],
+  origin: HeatNode,
+  minSteps: number,
+  maxSteps: number,
+  next: { x: number; y: number; nextVertical: boolean }[]
+): void {
+  let originDistance = Math.min(origin.from[0], origin.from[2])
+  for (let i = 1; i <= maxSteps; i++) {
+    if (origin.x + 1 > grid[0].length - i) break
+
+    let node = grid[origin.y][origin.x + i]
+    originDistance += node.value
+    if (i >= minSteps && node.from[3] > originDistance) {
+      next.push({ x: node.x, y: node.y, nextVertical: true })
+      node.from[3] = originDistance
+    }
+  }
+  originDistance = Math.min(origin.from[0], origin.from[2])
+  for (let i = 1; i <= maxSteps; i++) {
+    if (origin.x - i < 0) break
+
+    let node = grid[origin.y][origin.x - i]
+    originDistance += node.value
+    if (i >= minSteps && node.from[1] > originDistance) {
+      next.push({ x: node.x, y: node.y, nextVertical: true })
+      node.from[1] = originDistance
+    }
+  }
 }
 
 export function partTwo(input: string[]): number | string {
-  const { state, instructions } = parse(input)
-  let candidates = new Set<number>([0])
-
-  for (let i = 1; i <= instructions.length; i++) {
-    let nextCandidates = new Set<number>()
-    candidates.forEach((candidate) => {
-      nextCandidates = nextCandidates.union(
-        findNextCandidates(candidate, i, state, instructions)
-      )
-    })
-    candidates = nextCandidates
-  }
-  return candidates
-    .values()
-    .toArray()
-    .reduce((total, x) => (total < x ? total : x), 2 ** 63)
-}
-
-function findNextCandidates(
-  start: number,
-  position: number,
-  state: State,
-  instructions: number[]
-): Set<number> {
-  const candidates = new Set<number>()
-  for (let offset = 0; offset < 8; offset++) {
-    state.output = ''
-    state.instructionPointer = 0
-    state.A = start + offset
-
-    while (
-      state.instructionPointer > -1 &&
-      state.instructionPointer < instructions.length - 1
-    ) {
-      operation(
-        instructions[state.instructionPointer],
-        instructions[state.instructionPointer + 1],
-        state
-      )
-    }
-
-    let numberOut = state.output.split(/,/).map((x) => parseInt(x))
-    if (
-      position > 0 &&
-      numberOut[numberOut.length - position] ==
-        instructions[instructions.length - position]
-    ) {
-      candidates.add(
-        position < instructions.length ? (start + offset) * 8 : start + offset
-      )
-    }
-  }
-  return candidates
+  return findPaths(input, 4, 10)
 }

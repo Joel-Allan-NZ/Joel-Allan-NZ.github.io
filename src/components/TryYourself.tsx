@@ -33,7 +33,7 @@ export default function TryYourself({
   }
 
   const runPartTwo = async () => {
-    setSolving(() => true)
+    setSolving(true)
     partTwo(year, puzz, puzzleInput.split(/\r|\n/))
       .then((result) => {
         setSolution(() =>

@@ -1,0 +1,299 @@
+---
+year: 2023
+puzz: 17
+title: Clumsy Crucible
+---
+
+## Part One
+
+An Advent of Code staple: path-finding algorithms with some extra rules.
+
+<br />
+This particular solution is essentially [IDDFS](https://en.wikipedia.org/wiki/Iterative_deepening_depth-first_search),
+walking down sets of next positions until all reachable positions have been discovered.
+<br />
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partOne(input: string[]): number | string {
+  return findPaths(input, 0, 3)
+}
+interface HeatNode {
+  x: number
+  y: number
+  value: number
+  from: number[]
+}
+
+function findPaths(
+  input: string[],
+  minSteps: number,
+  maxSteps: number
+): number {
+  const grid = heatGrid(input)
+  grid[0][0].from = [0, 0, 0, 0]
+  let future: { x: number; y: number; nextVertical: boolean }[] = []
+  getNextVertical(grid, grid[0][0], minSteps, maxSteps, future)
+  getNextHorizontal(grid, grid[0][0], minSteps, maxSteps, future)
+
+  while (future.length > 0) {
+    const next = future
+    future = []
+    for (let state of next) {
+      if (state.nextVertical)
+        getNextVertical(
+          grid,
+          grid[state.y][state.x],
+          minSteps,
+          maxSteps,
+          future
+        )
+      else
+        getNextHorizontal(
+          grid,
+          grid[state.y][state.x],
+          minSteps,
+          maxSteps,
+          future
+        )
+    }
+  }
+  var last = grid[grid.length - 1][grid[0].length - 1]
+  return Math.min(last.from[0], last.from[1], last.from[2], last.from[3])
+}
+
+function heatGrid(input: string[]): HeatNode[][] {
+  const grid: HeatNode[][] = []
+  const big = 2 ** 31
+  for (let y = 0; y < input.length; y++) {
+    grid.push([])
+    for (let x = 0; x < input[y].length; x++) {
+      grid[y].push({
+        x,
+        y,
+        value: parseInt(input[y][x]),
+        from: [big, big, big, big],
+      })
+    }
+  }
+  return grid
+}
+
+function getNextVertical(
+  grid: HeatNode[][],
+  origin: HeatNode,
+  minSteps: number,
+  maxSteps: number,
+  next: { x: number; y: number; nextVertical: boolean }[]
+): void {
+  let originDistance = Math.min(origin.from[1], origin.from[3])
+
+  for (let i = 1; i <= maxSteps; i++) {
+    if (origin.y - i < 0) break
+
+    let node = grid[origin.y - i][origin.x]
+    originDistance += node.value
+    if (i >= minSteps && node.from[2] > originDistance) {
+      next.push({ x: node.x, y: node.y, nextVertical: false })
+      node.from[2] = originDistance
+    }
+  }
+
+  originDistance = Math.min(origin.from[1], origin.from[3])
+
+  for (let i = 1; i <= maxSteps; i++) {
+    if (origin.y + i > grid.length - 1) break
+
+    let node = grid[origin.y + i][origin.x]
+    originDistance += node.value
+    if (i >= minSteps && node.from[0] > originDistance) {
+      next.push({ x: node.x, y: node.y, nextVertical: false })
+      node.from[0] = originDistance
+    }
+  }
+}
+
+function getNextHorizontal(
+  grid: HeatNode[][],
+  origin: HeatNode,
+  minSteps: number,
+  maxSteps: number,
+  next: { x: number; y: number; nextVertical: boolean }[]
+): void {
+  let originDistance = Math.min(origin.from[0], origin.from[2])
+  for (let i = 1; i <= maxSteps; i++) {
+    if (origin.x + 1 > grid[0].length - i) break
+
+    let node = grid[origin.y][origin.x + i]
+    originDistance += node.value
+    if (i >= minSteps && node.from[3] > originDistance) {
+      next.push({ x: node.x, y: node.y, nextVertical: true })
+      node.from[3] = originDistance
+    }
+  }
+  originDistance = Math.min(origin.from[0], origin.from[2])
+  for (let i = 1; i <= maxSteps; i++) {
+    if (origin.x - i < 0) break
+
+    let node = grid[origin.y][origin.x - i]
+    originDistance += node.value
+    if (i >= minSteps && node.from[1] > originDistance) {
+      next.push({ x: node.x, y: node.y, nextVertical: true })
+      node.from[1] = originDistance
+    }
+  }
+}
+```
+
+```csharp
+public override object PartOne()
+{
+    return FindPaths(Input, 0, 3);
+}
+
+private class HeatNode(int x, int y, int value)
+{
+    internal int X = x;
+    internal int Y = y;
+    internal int Value = value;
+    internal int[] From = [int.MaxValue, int.MaxValue, int.MaxValue, int.MaxValue];
+}
+
+private static HeatNode[][] HeatGrid(string[] input)
+{
+    HeatNode[][] grid = new HeatNode[input.Length][];
+    for (int y = 0; y < input.Length; y++)
+    {
+        grid[y] = new HeatNode[input[y].Length];
+        for (int x = 0; x < input[y].Length; x++)
+        {
+            grid[y][x] = new HeatNode(x, y, input[y][x] - '0');
+        }
+    }
+    return grid;
+}
+
+private static int FindPaths(string[] input, int minSteps = 0, int maxSteps = int.MaxValue)
+{
+    var grid = HeatGrid(input);
+    grid[0][0].From = [0, 0, 0, 0];
+    List<(HeatNode origin, bool nextVertical)> next = [];
+    GetNextVertical(grid, grid[0][0], minSteps, maxSteps, next);
+    GetNextHorizontal(grid, grid[0][0], minSteps, maxSteps, next);
+
+    while (next.Count > 0)
+    {
+        var future = new List<(HeatNode origin, bool vertical)>();
+
+        foreach (var (origin, nextVertical) in next)
+        {
+            if (nextVertical)
+                GetNextVertical(grid, origin, minSteps, maxSteps, future);
+            else
+                GetNextHorizontal(grid, origin, minSteps, maxSteps, future);
+        }
+        next = future;
+    }
+    return grid[^1][^1].From.Min();
+}
+
+
+private static void GetNextVertical(HeatNode[][] grid, HeatNode origin, int minSteps, int maxSteps, List<(HeatNode origin, bool nextVertical)> next)
+{
+    var originDistance = Math.Min(origin.From[1], origin.From[3]);
+
+    for (int i = 1; i <= maxSteps; i++)
+    {
+        if (origin.Y - i < 0)
+            break;
+
+        var node = grid[origin.Y - i][origin.X];
+        originDistance += node.Value;
+
+        if (i >= minSteps && node.From[2] > originDistance)
+        {
+            next.Add((node, false));
+            node.From[2] = originDistance;
+
+        }
+
+    }
+
+
+    originDistance = Math.Min(origin.From[1], origin.From[3]);
+    for (int i = 1; i <= maxSteps; i++)
+    {
+        if (origin.Y + i > grid.Length - 1)
+            break;
+
+        var node = grid[origin.Y + i][origin.X];
+        originDistance += node.Value;
+
+        if (i >= minSteps && node.From[0] > originDistance)
+        {
+            next.Add((node, false));
+            node.From[0] = originDistance;
+        }
+
+    }
+}
+
+private static void GetNextHorizontal(HeatNode[][] grid, HeatNode origin, int minSteps, int maxSteps, List<(HeatNode origin, bool nextVertical)> next)
+{
+    var originDistance = Math.Min(origin.From[0], origin.From[2]);
+    for (int i = 1; i <= maxSteps; i++)
+    {
+        if (origin.X + 1 > grid[0].Length - i)
+            break;
+
+        var node = grid[origin.Y][origin.X + i];
+        originDistance += node.Value;
+
+        if (i >= minSteps && node.From[3] > originDistance)
+        {
+            next.Add((node, true));
+            node.From[3] = originDistance;
+        }
+
+    }
+
+    originDistance = Math.Min(origin.From[0], origin.From[2]);
+    for (int i = 1; i <= maxSteps; i++)
+    {
+        if (origin.X - i < 0)
+            break;
+
+        var node = grid[origin.Y][origin.X - i];
+        originDistance += node.Value;
+        if (i >= minSteps && node.From[1] > originDistance)
+        {
+            next.Add((node, true));
+            node.From[1] = originDistance;
+        }
+    }
+}
+```
+
+</CodeBox>
+
+## Part Two
+
+The same thing, but with slightly different numbers. It's actually _faster_ than part one, a real rarity for AoC!
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partTwo(input: string[]): number | string {
+  return findPaths(input, 4, 10)
+}
+```
+
+```csharp
+public override object PartTwo()
+{
+    return FindPaths(Input, 4, 10);
+}
+```
+
+</CodeBox>
