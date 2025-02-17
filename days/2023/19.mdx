@@ -1,0 +1,390 @@
+---
+year: 2023
+puzz: 19
+title: Aplenty
+---
+
+## Part One
+
+Pick your poison on how to parse the workflows and check their conditions. No real trick or classic algorithm here, just modelling a system.
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partOne(input: string[]): number | string {
+  const { flows, parts } = parse(input)
+  const accepted: number[][] = []
+
+  parts.forEach((part) => {
+    let result = 'in'
+    while (true) {
+      result = flows.get(result)!.find((x) => x.application(part))!.next
+      if (result == 'R') break
+      if (result == 'A') {
+        accepted.push(part)
+        break
+      }
+    }
+  })
+  return accepted.reduce(
+    (total, part) => total + part[0] + part[1] + part[2] + part[3],
+    0
+  )
+}
+
+class Rule {
+  next: string
+  equality: string
+  target: number
+  xmas: number
+  application: (part: number[]) => boolean
+
+  constructor(rule: string) {
+    const split = rule.split(':')
+    this.next = split.length > 1 ? split[1] : split[0]
+    this.xmas = this.xmasToNumber(rule[0])
+    this.target = split.length == 1 ? -1 : parseInt(split[0].slice(2))
+    this.equality = rule.length > 1 ? rule[1] : rule[0]
+
+    if (this.target == -1) this.application = (r) => true
+    else
+      this.application =
+        this.equality == '<'
+          ? (r) => r[this.xmas] < this.target
+          : (r) => r[this.xmas] > this.target
+  }
+
+  xmasToNumber(xmas: string) {
+    switch (xmas) {
+      case 'x':
+        return 0
+      case 'm':
+        return 1
+      case 'a':
+        return 2
+      default:
+        return 3
+    }
+  }
+}
+
+function parse(input: string[]): {
+  flows: Map<string, Rule[]>
+  parts: number[][]
+} {
+  const flows = new Map<string, Rule[]>()
+  const parts: number[][] = []
+  let readingWorkFlows = true
+
+  input.forEach((line) => {
+    if (!line || line.length == 0) {
+      readingWorkFlows = false
+    } else {
+      const split = line.slice(0, -1).split(/[\{\,]/g)
+      if (readingWorkFlows)
+        flows.set(
+          split[0],
+          split.slice(1).map((x) => new Rule(x))
+        )
+      else parts.push(split.slice(1, 5).map((i) => parseInt(i.slice(2))))
+    }
+  })
+  return { flows, parts }
+}
+```
+
+```csharp
+public override object PartOne()
+{
+    var (flows, parts) = Parse(Input);
+    List<Part> accepted = [];
+    foreach (var part in parts)
+    {
+        var result = "in";
+        while (true)
+        {
+            result = flows[result].First(x => x.Application(part))!.Next;
+            if (result == "R")
+                break;
+            if (result == "A")
+            {
+                accepted.Add(part);
+                break;
+            }
+        }
+    }
+    return accepted.Sum(acc => acc.X + acc.M + acc.A + acc.S);
+}
+
+private static (Dictionary<string, Rule[]> flows, List<Part> parts) Parse(string[] input)
+{
+    Dictionary<string, Rule[]> flows = [];
+    List<Part> parts = [];
+
+    bool readingWorkFlows = true;
+    foreach (var line in input)
+    {
+        if (string.IsNullOrEmpty(line))
+        {
+            readingWorkFlows = false;
+            continue;
+        }
+        var split = line.Split(['{', '}', ','], StringSplitOptions.RemoveEmptyEntries);
+
+        if (readingWorkFlows)
+            flows.Add(split[0], split[1..].Select(x => new Rule(x)).ToArray());
+        else
+            parts.Add(new(int.Parse(split[0][2..]), int.Parse(split[1][2..]), int.Parse(split[2][2..]), int.Parse(split[3][2..])));
+    }
+    return (flows, parts);
+}
+
+internal class Rule
+{
+    internal char Equality;
+    internal Func<Part, bool> Application;
+    internal string Next;
+    internal int Target;
+    internal char XMAS;
+
+    public Rule(string rule)
+    {
+        var split = rule.Split(':');
+        Next = split.Length > 1 ? split[1] : split[0];
+        XMAS = rule[0];
+        Target = split.Length == 1 ? -1 : int.Parse(split[0][2..]);
+        Equality = rule.Length > 1 ? rule[1] : rule[0];
+        Application = ParseRule();
+    }
+
+
+    internal Func<Part, bool> ParseRule()
+    {
+        if (Target == -1)
+            return (r => true);
+        else if (Equality == '<')
+            return (r => r.GetXMASValue(XMAS) < Target);
+        else
+            return (r => r.GetXMASValue(XMAS) > Target);
+    }
+}
+
+internal class Part(int x, int m, int a, int s)
+{
+    internal int X = x;
+    internal int M = m;
+    internal int A = a;
+    internal int S = s;
+
+    internal int GetXMASValue(char s) => s switch
+    {
+        'x' => X,
+        'm' => M,
+        'a' => A,
+        _ => S
+    };
+}
+```
+
+</CodeBox>
+
+## Part Two
+
+Instead of modelling the system for the parts list, you now have to find all valid parts. Rather than trying to enumerate the possible part values (4000^4 is big!), I opted to treat it as ranges of valid values. When a range encounters a rule that wouldn't pass for the entire range, the range is split into 2 ranges. Again, nothing complex, just execution.
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partTwo(input: string[]): number | string {
+  const { flows, parts } = parse(input)
+  const queue: { ranges: number[][][]; rules: Rule[] }[] = [
+    {
+      ranges: [
+        [
+          [1, 4000],
+          [1, 4000],
+          [1, 4000],
+          [1, 4000],
+        ],
+      ],
+      rules: flows.get('in')!,
+    },
+  ]
+  let valid: number[][][] = []
+
+  while (queue.length > 0) {
+    const { ranges, rules } = queue.shift()!
+    const result = applyRulesToRange(rules, ranges)
+    result.entries().forEach((kvp) => {
+      if (kvp[0] != 'R') {
+        if (kvp[0] == 'A') valid = [...valid, ...kvp[1]]
+        else queue.push({ ranges: kvp[1], rules: flows.get(kvp[0])! })
+      }
+    })
+  }
+
+  return valid.reduce(
+    (total, range) => total + range.reduce((t, r) => t * (r[1] - r[0] + 1), 1),
+    0
+  )
+}
+
+function split(
+  current: number[][],
+  xmas: number,
+  min: number,
+  max: number
+): number[][] {
+  const other: number[][] = [
+    [...current[0]],
+    [...current[1]],
+    [...current[2]],
+    [...current[3]],
+  ]
+  other[xmas][1] = Math.min(max, current[xmas][1])
+  other[xmas][0] = Math.max(min, current[xmas][0])
+
+  if (other[xmas][0] > current[xmas][0] && other[xmas][0] < current[xmas][1])
+    current[xmas][1] = other[xmas][0] - 1
+  else if (
+    current[xmas][1] > other[xmas][1] &&
+    other[xmas][1] > current[xmas][0]
+  )
+    current[xmas][0] = other[xmas][1] + 1
+  else {
+    current[xmas][0] = -1
+    current[xmas][1] = -1
+  }
+  return other
+}
+
+function applyRulesToRange(
+  rules: Rule[],
+  parts: number[][][]
+): Map<string, number[][][]> {
+  const continuing = new Map<string, number[][][]>()
+
+  for (let part of parts) {
+    for (let rule of rules) {
+      if (!continuing.has(rule.next)) continuing.set(rule.next, [])
+      if (rule.target == -1) {
+        continuing.get(rule.next)!.push(part)
+        break
+      }
+      let range = part[rule.xmas]
+
+      if (range[0] <= rule.target && range[1] >= rule.target) {
+        if (rule.equality == '>')
+          continuing
+            .get(rule.next)!
+            .push(split(part, rule.xmas, rule.target + 1, Infinity))
+        else
+          continuing
+            .get(rule.next)!
+            .push(split(part, rule.xmas, -1, rule.target - 1))
+      }
+    }
+  }
+
+  return continuing
+}
+```
+
+```csharp
+public override object PartTwo()
+{
+    var (flows, parts) = Parse(Input);
+    Queue<(List<PartRange> ranges, Rule[] flow)> toProcess = [];
+    PartRange maxRange = new([1, 4000], [1, 4000], [1, 4000], [1, 4000]);
+    toProcess.Enqueue(([maxRange], flows["in"]));
+    List<PartRange> valid = [];
+
+    while (toProcess.Count > 0)
+    {
+        var (ranges, flow) = toProcess.Dequeue();
+        var result = ApplyWorkFlowRange(flow, ranges);
+        foreach (var kvp in result)
+        {
+            if (kvp.Key == "R")
+                continue;
+            if (kvp.Key == "A")
+            {
+                valid.AddRange(kvp.Value);
+                continue;
+            }
+            toProcess.Enqueue((kvp.Value, flows[kvp.Key]));
+        }
+    }
+
+    return valid.Sum(v => (long)(v.X[1] - v.X[0] + 1) * (v.A[1] - v.A[0] + 1) * (v.M[1] - v.M[0] + 1) * (v.S[1] - v.S[0] + 1));
+
+}
+
+internal class PartRange(int[] x, int[] m, int[] a, int[] s)
+{
+    internal int[] X = x;
+    internal int[] M = m;
+    internal int[] A = a;
+    internal int[] S = s;
+
+    internal int[] GetXMAS(char xmas) => xmas switch
+    {
+        'x' => X,
+        'm' => M,
+        'a' => A,
+        _ => S,
+    };
+
+    internal PartRange Split(char xmas, int min, int max)
+    {
+        var range = GetXMAS(xmas);
+        PartRange other = new([X[0], X[1]], [M[0], M[1]], [A[0], A[1]], [S[0], S[1]]);
+        var otherRange = other.GetXMAS(xmas);
+
+        otherRange[1] = Math.Min(max, range[1]);
+        otherRange[0] = Math.Max(min, range[0]);
+
+        if (otherRange[0] > range[0] && otherRange[0] < range[1])
+            range[1] = otherRange[0] - 1;
+        else if (range[1] > otherRange[1] && otherRange[1] > range[0])
+            range[0] = otherRange[1] + 1;
+        else
+        {
+            range[0] = -1;
+            range[1] = -1;
+        }
+        return other;
+    }
+}
+
+private static Dictionary<string, List<PartRange>> ApplyWorkFlowRange(Rule[] rules, List<PartRange> parts)
+{
+    Dictionary<string, List<PartRange>> continuing = [];
+
+    foreach (var part in parts)
+    {
+        foreach (var rule in rules)
+        {
+            if (!continuing.ContainsKey(rule.Next))
+                continuing[rule.Next] = [];
+            if (rule.Target == -1)
+            {
+                continuing[rule.Next].Add(part);
+                break;
+            }
+            var range = part.GetXMAS(rule.XMAS);
+
+            if (range[0] <= rule.Target && range[1] >= rule.Target)
+            {
+                if (rule.Equality == '>')
+                    continuing[rule.Next].Add(part.Split(rule.XMAS, rule.Target + 1, int.MaxValue));
+                else
+                    continuing[rule.Next].Add(part.Split(rule.XMAS, -1, rule.Target - 1));
+            }
+        }
+    }
+    return continuing;
+}
+```
+
+</CodeBox>
