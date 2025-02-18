@@ -1,0 +1,240 @@
+---
+year: 2023
+puzz: 21
+title: Step Counter
+---
+
+## Part One
+
+A nice and easy part one; traverse points in the grid within the range of a step target (64) and then count how many you could end on. For an even number of steps you can finish on any even distance. Nothing fancy, just a simple [bfs.](https://en.wikipedia.org/wiki/Breadth-first_search)
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partOne(input: string[]): number | string {
+  const distances = findAccessiblePlots(
+    Math.floor(input[0].length / 2),
+    Math.floor(input.length / 2),
+    input,
+    64
+  )
+  return distances
+    .values()
+    .filter((x) => x % 2 == 0)
+    .toArray().length
+}
+
+function findAccessiblePlots(
+  startX: number,
+  startY: number,
+  input: string[],
+  stepTarget: number
+): Map<string, number> {
+  const distances = new Map<string, number>()
+  distances.set(startX + ',' + startY, 0)
+  const positions = [[startX, startY]]
+  const steps = [
+    [0, 1],
+    [0, -1],
+    [1, 0],
+    [-1, 0],
+  ]
+
+  let pos = 0
+  while (positions.length > 0) {
+    let current = positions.shift()!
+    pos++
+    console.log(pos)
+    const currentDistance = distances.get(current.join(','))!
+    if (currentDistance >= stepTarget) continue
+
+    for (let step of steps) {
+      const next = [current[0] + step[0], current[1] + step[1]]
+      if (next.some((x) => x < 0 || x >= input.length)) continue
+
+      if (input[next[1]][next[0]] != '#') {
+        const nextString = next.join(',')
+        const existing = distances.get(nextString)
+        if (!existing || existing > currentDistance + 1) {
+          distances.set(nextString, currentDistance + 1)
+          positions.push(next)
+        }
+      }
+    }
+  }
+
+  return distances
+}
+```
+
+```csharp
+public override object PartOne()
+{
+    var distances = FindAccessiblePlots(Input[0].Length / 2, Input.Length / 2, Input, 64);
+    return distances.Values.Count(x => x % 2 == 0);
+}
+
+private static Dictionary<string, int> FindAccessiblePlots(int startX, int startY, string[] input, long stepTarget)
+{
+    Dictionary<string, int> distances = [];
+    distances[startX + "," + startY] = 0;
+    Queue<(int x, int y)> positions = [];
+    positions.Enqueue((startX, startY));
+    int[][] steps = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+
+    while (positions.Count > 0)
+    {
+        var (x, y) = positions.Dequeue();
+        var currentDistance = distances[x + "," + y];
+        if (currentDistance > stepTarget - 1)
+            continue;
+
+        foreach (var step in steps)
+        {
+            var next = (x: x + step[0], y: y + step[1]);
+            if (next.x < 0 || next.y < 0 || next.x >= input[0].Length || next.y >= input.Length)
+                continue;
+
+            if (input[next.y][next.x] != '#')
+            {
+                var nextString = next.x + "," + next.y;
+                if (!distances.TryGetValue(nextString, out var existing) || existing > currentDistance + 1)
+                {
+                    distances[nextString] = currentDistance + 1;
+                    positions.Enqueue(next);
+                }
+            }
+        }
+    }
+    return distances;
+}
+```
+
+</CodeBox>
+
+## Part Two
+
+I feel like 21 is consistently one of the hardest puzzle days of the year, and this is no exception.
+
+<br />
+My first thought was simply to naively check the number of accessible points in the
+same manner as part 1, albeit with judicious use of the `%` operator to have coords
+check the correct areas, without having to actually manually tesselate the input
+space. Unsurprisingly, this was faaaar too slow to be useful, so I was forced to
+look for other approaches.
+<br />
+My next idea was to check the distances of all points in the input, and extrapolate
+out how many times each of those points (and their tesselated equivalents) could
+be reached within the maximum step size. This required a lot of tedious number crunching
+based on distances from the start and edge... until I actually looked at the input.
+<br />
+The input has three very distinct features. Firstly, the start location is precisely
+in the center. Secondly, there is a distinct diamond shape that correlates very evenly
+with half of the size of the input (ie the points in the diamond shape are equivalent
+[manhattan distances](https://en.wikipedia.org/wiki/Taxicab_geometry) from the start),
+and thirdly, there are perfect straight lines of empty space above, below, and to
+either side of the start. These three features allow for some shortcuts: we know
+the maximum distance we can travel in any direction is exactly equivalent to the
+target step count, and therefore the tesselations in any given direction will be
+exactly eqiuvalent to `(stepTarget - 0.5*input.Length)/input.Length`. We also know
+that the diagonal sections represent the same manhattan distance from the start as
+the directly vertical/horizontal edges, so the furthest points we can ever travel
+to will be within that diagonal distance - the total area we can travel within is
+also shaped like a diamond! Finally, the size of the input space is odd, which, along
+with our centered start location, means the odd-distance points in one input-sized
+space have even-distances in adjacent tesselations.
+<br />
+With all of that in mind, we can calculate the accessible points geometrically -
+the first input size can be treated as 'odd', the tesselations at cardinal directions
+from that are 'even', then 'odd'... and so on. As our number of tesselations in any
+cardinal direction are even, the outer most tesselation in those directions will
+be odd. Therefore we need to cut off the outside corners of every odd external-edge
+tesselation, and also *add* an internal corner from every even external-edge tesselation.
+Finally, we can do the actual calculations:
+
+```js
+let total =
+  (tesselations + 1) ** 2 * oddAccessible +
+  tesselations ** 2 * evenAccessible -
+  (tesselations + 1) * oddCorners +
+  tesselations * evenCorners
+```
+
+<br />
+Find that hard to follow? I don't blame you!
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partTwo(input: string[]): number | string {
+  const distances = findAccessiblePlots(
+    Math.floor(input[0].length / 2),
+    Math.floor(input.length / 2),
+    input,
+    input.length
+  )
+  return calculateAccessible(input, distances, 26501365)
+}
+
+function calculateAccessible(
+  input: string[],
+  distances: Map<string, number>,
+  steps: number
+): number {
+  const oddCorners = distances
+    .values()
+    .reduce(
+      (total, current) =>
+        current % 2 == 1 && current > 65 ? total + 1 : total,
+      0
+    )
+  const evenCorners = distances
+    .values()
+    .reduce(
+      (total, current) =>
+        current % 2 == 0 && current > 65 ? total + 1 : total,
+      0
+    )
+
+  const even = distances
+    .values()
+    .reduce((total, current) => (current % 2 == 0 ? total + 1 : total), 0)
+  const odd = distances
+    .values()
+    .reduce((total, current) => (current % 2 == 1 ? total + 1 : total), 0)
+
+  const tesselations = (steps - Math.floor(input.length / 2)) / input.length
+
+  const totalTiles =
+    (tesselations + 1) ** 2 * odd +
+    tesselations ** 2 * even -
+    (tesselations + 1) * oddCorners +
+    tesselations * evenCorners
+
+  return totalTiles
+}
+```
+
+```csharp
+public override object PartTwo()
+{
+    var distances = FindAccessiblePlots(Input[0].Length / 2, Input.Length / 2, Input, Input.Length);
+    return CalculateAccessible(Input, distances, 26501365);
+}
+
+private static double CalculateAccessible(string[] input, Dictionary<string, int> distances, int steps)
+{
+    var oddCorners = distances.Values.Count(x => x % 2 == 1 && x > 65);
+    var evenCorners = distances.Values.Count(x => x % 2 == 0 && x > 65);
+
+    var odd = distances.Values.Count(x => x % 2 == 1);
+    var even = distances.Values.Count(x => x % 2 == 0);
+
+    var tesselations = (steps - (input.Length / 2)) / input.Length;
+
+    var totalTiles = (Math.Pow(tesselations + 1, 2) * odd) + (Math.Pow(tesselations, 2) * even) - ((tesselations + 1) * oddCorners) + (tesselations * evenCorners);
+    return totalTiles;
+}
+```
+
+</CodeBox>
