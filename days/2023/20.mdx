@@ -1,0 +1,355 @@
+---
+year: 2023
+puzz: 20
+title: Pulse Progagation
+---
+
+## Part One
+
+Another pretty straight-forward part one. Model the system, press the button, count the pulse, return an answer.
+
+<br />
+Given that this look suspiciously like a program of some type being executed (logic
+gates), part 2 is probably going to be a nightmare 😆
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partOne(input: string[]): number | string {
+  var modules = parse(input)
+  const pulses = [0, 0]
+
+  for (let i = 0; i < 1000; i++) {
+    const result = buttonPulses(modules, i)
+    pulses[0] += result[0]
+    pulses[1] += result[1]
+  }
+
+  return pulses[0] * pulses[1]
+}
+
+interface Module {
+  type: string
+  name: string
+  connections: string[]
+  high: boolean
+  inputs: Map<string, boolean> | undefined
+}
+
+interface Pulse {
+  high: boolean
+  origin: string
+  destination: string
+}
+
+function parse(input: string[]): Map<string, Module> {
+  const modules = new Map<string, Module>()
+  const outputOnly = new Set<string>()
+
+  input.forEach((line) => {
+    const split = line.split(/\, | /)
+    const type = split[0][0]
+    const name = type == 'b' ? split[0] : split[0].slice(1)
+    modules.set(name, {
+      type,
+      name,
+      connections: split.slice(2),
+      high: false,
+      inputs: undefined,
+    })
+  })
+
+  modules.entries().forEach((kvp) => {
+    if (kvp[1].type == '&') {
+      kvp[1].inputs = new Map<string, boolean>()
+      modules.values().forEach((value) => {
+        if (value.connections.includes(kvp[0]))
+          kvp[1].inputs!.set(value.name, false)
+      })
+    }
+    kvp[1].connections.forEach((connection) => {
+      if (!modules.has(connection)) outputOnly.add(connection)
+    })
+  })
+
+  outputOnly.forEach((name) =>
+    modules.set(name, {
+      type: 'b',
+      name,
+      connections: [],
+      high: true,
+      inputs: undefined,
+    })
+  )
+
+  return modules
+}
+
+function buttonPulses(
+  modules: Map<string, Module>,
+  presses: number,
+  monitoring: Map<string, number> | undefined = undefined
+): number[] {
+  let queue: Pulse[] = []
+  const pulses = [1, 0]
+  queue.push({ high: false, origin: 'button', destination: 'broadcaster' })
+
+  while (queue.length > 0) {
+    const pulse = queue.shift()!
+    const destination = modules.get(pulse.destination)!
+
+    if (monitoring && pulse.high && monitoring.has(pulse.origin))
+      if (monitoring.get(pulse.origin) == -1)
+        monitoring.set(pulse.origin, presses)
+
+    handlePulse(destination, pulse, pulses, queue)
+  }
+  return pulses
+}
+
+function handlePulse(
+  destination: Module,
+  pulse: Pulse,
+  pulses: number[],
+  next: Pulse[]
+): void {
+  if (destination.type == '%') {
+    if (!pulse.high) {
+      destination.high = !destination.high
+      countPulses(destination.high, destination.connections.length, pulses)
+
+      destination.connections.forEach((connection) =>
+        next.push({
+          high: destination.high,
+          origin: destination.name,
+          destination: connection,
+        })
+      )
+    }
+  } else if (destination.type == '&') {
+    destination.inputs!.set(pulse.origin, pulse.high)
+    const output = destination.inputs!.values().some((x) => !x)
+    countPulses(output, destination.connections.length, pulses)
+
+    destination.connections.forEach((connection) =>
+      next.push({
+        high: output,
+        origin: destination.name,
+        destination: connection,
+      })
+    )
+  } else {
+    pulses[0] += destination.connections.length
+    destination.connections.forEach((connection) =>
+      next.push({
+        high: false,
+        origin: destination.name,
+        destination: connection,
+      })
+    )
+  }
+}
+
+function countPulses(high: boolean, length: number, pulses: number[]) {
+  if (high) pulses[1] += length
+  else pulses[0] += length
+}
+```
+
+```csharp
+public override object PartOne()
+{
+    var modules = Parse(Input);
+    long[] pulses = [0, 0];
+    for (int i = 0; i < 1000; i++)
+    {
+        var pulseResult = ButtonPulses(modules, i);
+        pulses[0] += pulseResult[0];
+        pulses[1] += pulseResult[1];
+    }
+    return pulses[0] * pulses[1];
+}
+
+private static Dictionary<string, Module> Parse(string[] input)
+{
+    Dictionary<string, Module> modules = [];
+    HashSet<string> outputOnly = [];
+
+    foreach (var line in input)
+    {
+        var split = line.Split([' ', ','], StringSplitOptions.RemoveEmptyEntries);
+        var type = split[0][0];
+        var name = type == 'b' ? split[0] : split[0][1..];
+        modules.Add(name, new(type, name, split[2..], false));
+    }
+
+    foreach (var kvp in modules)
+    {
+        if (kvp.Value.Type == '&')
+        {
+            foreach (var value in modules.Values)
+            {
+                if (value.Connections.Contains(kvp.Key))
+                    kvp.Value.Inputs.Add(value.Name, false);
+            }
+        }
+        foreach (var value in kvp.Value.Connections)
+        {
+            if (!modules.ContainsKey(value))
+                outputOnly.Add(value);
+        }
+    }
+
+    foreach (var v in outputOnly)
+        modules.Add(v, new('b', v, [], true));
+
+    return modules;
+}
+
+private static long[] ButtonPulses(Dictionary<string, Module> modules, int presses, Dictionary<string, long>? monitoring = null)
+{
+    Queue<Pulse> queue = [];
+    long[] pulses = [1, 0];
+    queue.Enqueue(new(false, "button", "broadcaster"));
+    while (queue.Count > 0)
+    {
+        var pulse = queue.Dequeue();
+        var destination = modules[pulse.Destination];
+
+        if (monitoring != null && pulse.High && monitoring.ContainsKey(pulse.Origin))
+        {
+            if (monitoring[pulse.Origin] == -1)
+                monitoring[pulse.Origin] = presses;
+        }
+
+        HandlePulse(destination, pulse, pulses, queue);
+    }
+    return pulses;
+}
+
+private static void HandlePulse(Module destination, Pulse pulse, long[] pulses, Queue<Pulse> nextPulses)
+{
+    if (destination.Type == '%')
+    {
+        if (!pulse.High)
+        {
+            destination.Value = !destination.Value;
+            countPulses(destination.Value, destination.Connections.Length, pulses);
+
+            foreach (var connection in destination.Connections)
+                nextPulses.Enqueue(new(destination.Value, destination.Name, connection));
+        }
+    }
+    else if (destination.Type == '&')
+    {
+        destination.Inputs[pulse.Origin] = pulse.High;
+        var output = destination.Inputs.Values.Any(x => !x);
+        countPulses(output, destination.Connections.Length, pulses);
+
+        foreach (var connection in destination.Connections)
+            nextPulses.Enqueue(new(output, destination.Name, connection));
+    }
+    else
+    {
+        pulses[0] += destination.Connections.Length;
+        foreach (var connection in destination.Connections)
+            nextPulses.Enqueue(new(false, destination.Name, connection));
+    }
+
+    static void countPulses(bool high, long length, long[] pulses)
+    {
+        if (high) pulses[1] += length;
+        else pulses[0] += length;
+    }
+}
+
+internal class Pulse(bool high, string origin, string destination)
+{
+    internal bool High = high;
+    internal string Origin = origin;
+    internal string Destination = destination;
+}
+
+internal class Module(char type, string name, string[] connections, bool value)
+{
+    internal char Type = type;
+    internal string Name = name;
+    internal string[] Connections = connections;
+    internal bool Value = value;
+    internal Dictionary<string, bool> Inputs = [];
+}
+```
+
+</CodeBox>
+
+## Part Two
+
+Dire predictions aside, this one wasn't too bad!
+
+<br />
+Attempting to use the same approach as part one quickly proved not to scale realistically,
+so the new idea is to find when pulses are fed to the grandparents of the target
+module, and use them to find the first time that a high pulse could be sent to `rx`.
+<br />
+This approach is built on a *number* of assumptions.
+
+1. All inputs are structured with a single `&` parent leading into `rx`. There's no direct evidence to support this, but problem inputs are intended to be similarly difficult. Therefore we can be reasonably confident on this.
+
+2. The system cycles. Again, no obvious direct evidence from the clue or input, but we can reason that it's likely. Emperically demonstrated with a valid answer based on that underlying assumption.
+
+3. The inputs to `rx`'s parent will have prime-number length cycles. This proved to be true for my input, but it's possible (though unlikely IMO) that there are inputs that do not have prime length cycles. For those inputs finding the [LCM](https://en.wikipedia.org/wiki/Least_common_multiple) of parent cycles would be required.
+
+<br />
+If those assumptions prove to be incorrect for your input then this will fail for
+you, but in my opinion that's unlikely. Good luck!
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partTwo(input: string[]): number | string {
+  const modules = parse(input)
+  const grandParentHigh = new Map<string, number>()
+  const rxParents = modules.values().filter((x) => x.connections.includes('rx'))
+
+  rxParents.forEach((parent) =>
+    parent.inputs?.keys().forEach((input) => grandParentHigh.set(input, -1))
+  )
+
+  let pressed = 0
+
+  while (modules.get('rx')!.high) {
+    pressed++
+    buttonPulses(modules, pressed, grandParentHigh)
+    if (grandParentHigh.values().every((v) => v != -1)) {
+      console.log(grandParentHigh.values())
+      return grandParentHigh.values().reduce((total, value) => value * total, 1)
+    }
+  }
+  return pressed
+}
+```
+
+```csharp
+public override object PartTwo()
+{
+    var modules = Parse(Input);
+    var rxParents = modules.Values.Where(x => x.Connections.Contains("rx"));
+    var rxGrandParents = rxParents.SelectMany(x => x.Inputs.Keys);
+    Dictionary<string, long> grandParentHigh = [];
+
+    foreach (var gp in rxGrandParents)
+        grandParentHigh[gp] = -1;
+
+    int pressed = 0;
+    while (modules["rx"].Value)
+    {
+        pressed++;
+        ButtonPulses(modules, pressed, grandParentHigh);
+        if (grandParentHigh.Values.All(x => x != -1))
+            return grandParentHigh.Values.Aggregate((x, y) => x * y);
+    }
+    return pressed;
+}
+```
+
+</CodeBox>

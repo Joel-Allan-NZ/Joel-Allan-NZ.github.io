@@ -1,133 +1,161 @@
 export function partOne(input: string[]): number | string {
-  const { graph, start } = parse(input)
-  findMinimumDistances(graph, start)
-  const distance = 2,
-    target = 100
-  let count = 0
+  var modules = parse(input)
+  const pulses = [0, 0]
 
-  for (let y = 0; y < graph.length; y++) {
-    for (let x = 0; x < graph[y].length; x++) {
-      if (graph[y][x].value != '#')
-        count += neighboursWithinManhattanDistance(
-          graph,
-          graph[y][x],
-          distance,
-          target
-        )
-    }
+  for (let i = 0; i < 1000; i++) {
+    const result = buttonPulses(modules, i)
+    pulses[0] += result[0]
+    pulses[1] += result[1]
   }
-  return count
+
+  return pulses[0] * pulses[1]
 }
 
-interface DistanceAwareNode {
-  value: string
-  distance: number
-  x: number
-  y: number
+interface Module {
+  type: string
+  name: string
+  connections: string[]
+  high: boolean
+  inputs: Map<string, boolean> | undefined
 }
 
-function parse(input: string[]): {
-  graph: DistanceAwareNode[][]
-  start: DistanceAwareNode
-} {
-  const graph: DistanceAwareNode[][] = []
-  let start: DistanceAwareNode | undefined = undefined
-
-  for (let y = 0; y < input.length; y++) {
-    graph.push([])
-    for (let x = 0; x < input[y].length; x++) {
-      const node = {
-        value: input[y][x],
-        distance: input[y][x] == '#' ? 0 : 2 ** 31,
-        x,
-        y,
-      }
-      graph[y].push(node)
-      if (input[y][x] == 'S') start = node
-    }
-  }
-  return { graph, start: start! }
+interface Pulse {
+  high: boolean
+  origin: string
+  destination: string
 }
 
-function findMinimumDistances(
-  graph: DistanceAwareNode[][],
-  start: DistanceAwareNode
-): void {
-  const toExplore: DistanceAwareNode[] = [start]
-  start.distance = 0
+function parse(input: string[]): Map<string, Module> {
+  const modules = new Map<string, Module>()
+  const outputOnly = new Set<string>()
 
-  while (toExplore.length > 0) {
-    const current = toExplore.shift()!
-    const neighbours = getNeighbours(graph, current)
-    neighbours.forEach((neighbour) => {
-      if (neighbour.value != '#' && neighbour.distance > current.distance + 1) {
-        toExplore.push(neighbour)
-        neighbour.distance = current.distance + 1
-      }
+  input.forEach((line) => {
+    const split = line.split(/\, | /)
+    const type = split[0][0]
+    const name = type == 'b' ? split[0] : split[0].slice(1)
+    modules.set(name, {
+      type,
+      name,
+      connections: split.slice(2),
+      high: false,
+      inputs: undefined,
     })
-  }
-}
+  })
 
-function getNeighbours(graph: DistanceAwareNode[][], node: DistanceAwareNode) {
-  const res: DistanceAwareNode[] = []
-
-  if (node.x < graph[0].length - 1) res.push(graph[node.y][node.x + 1])
-  if (node.x > 0) res.push(graph[node.y][node.x - 1])
-  if (node.y < graph.length - 1) res.push(graph[node.y + 1][node.x])
-  if (node.y > 0) res.push(graph[node.y - 1][node.x])
-
-  return res
-}
-
-function neighboursWithinManhattanDistance(
-  graph: DistanceAwareNode[][],
-  node: DistanceAwareNode,
-  cheatDistance: number,
-  cheatTimeGain: number
-): number {
-  let count = 0
-  const yMin = Math.max(0, node.y - cheatDistance)
-  const yMax = Math.min(graph.length - 1, node.y + cheatDistance)
-
-  for (let y = yMin; y <= yMax; y++) {
-    const remainingManhattanDistance = cheatDistance - Math.abs(node.y - y)
-    const xMin = Math.max(0, node.x - remainingManhattanDistance)
-    const xMax = Math.min(
-      graph[y].length - 1,
-      node.x + remainingManhattanDistance
-    )
-
-    for (let x = xMin; x <= xMax; x++) {
-      const neighbour = graph[y][x]
-      const manhattanDistance = Math.abs(node.x - x) + Math.abs(node.y - y)
-
-      if (
-        neighbour.distance - manhattanDistance - cheatTimeGain >=
-        node.distance
-      )
-        count++
+  modules.entries().forEach((kvp) => {
+    if (kvp[1].type == '&') {
+      kvp[1].inputs = new Map<string, boolean>()
+      modules.values().forEach((value) => {
+        if (value.connections.includes(kvp[0]))
+          kvp[1].inputs!.set(value.name, false)
+      })
     }
+    kvp[1].connections.forEach((connection) => {
+      if (!modules.has(connection)) outputOnly.add(connection)
+    })
+  })
+
+  outputOnly.forEach((name) =>
+    modules.set(name, {
+      type: 'b',
+      name,
+      connections: [],
+      high: true,
+      inputs: undefined,
+    })
+  )
+
+  return modules
+}
+
+function buttonPulses(
+  modules: Map<string, Module>,
+  presses: number,
+  monitoring: Map<string, number> | undefined = undefined
+): number[] {
+  let queue: Pulse[] = []
+  const pulses = [1, 0]
+  queue.push({ high: false, origin: 'button', destination: 'broadcaster' })
+
+  while (queue.length > 0) {
+    const pulse = queue.shift()!
+    const destination = modules.get(pulse.destination)!
+
+    if (monitoring && pulse.high && monitoring.has(pulse.origin))
+      if (monitoring.get(pulse.origin) == -1)
+        monitoring.set(pulse.origin, presses)
+
+    handlePulse(destination, pulse, pulses, queue)
   }
-  return count
+  return pulses
+}
+
+function handlePulse(
+  destination: Module,
+  pulse: Pulse,
+  pulses: number[],
+  next: Pulse[]
+): void {
+  if (destination.type == '%') {
+    if (!pulse.high) {
+      destination.high = !destination.high
+      countPulses(destination.high, destination.connections.length, pulses)
+
+      destination.connections.forEach((connection) =>
+        next.push({
+          high: destination.high,
+          origin: destination.name,
+          destination: connection,
+        })
+      )
+    }
+  } else if (destination.type == '&') {
+    destination.inputs!.set(pulse.origin, pulse.high)
+    const output = destination.inputs!.values().some((x) => !x)
+    countPulses(output, destination.connections.length, pulses)
+
+    destination.connections.forEach((connection) =>
+      next.push({
+        high: output,
+        origin: destination.name,
+        destination: connection,
+      })
+    )
+  } else {
+    pulses[0] += destination.connections.length
+    destination.connections.forEach((connection) =>
+      next.push({
+        high: false,
+        origin: destination.name,
+        destination: connection,
+      })
+    )
+  }
+}
+
+function countPulses(high: boolean, length: number, pulses: number[]) {
+  if (high) pulses[1] += length
+  else pulses[0] += length
 }
 
 export function partTwo(input: string[]): number | string {
-  const { graph, start } = parse(input)
-  findMinimumDistances(graph, start)
-  const distance = 20,
-    target = 100
-  let count = 0
+  const modules = parse(input)
+  const grandParentHigh = new Map<string, number>()
+  const rxParents = modules.values().filter((x) => x.connections.includes('rx'))
 
-  for (let y = 0; y < graph.length; y++) {
-    for (let x = 0; x < graph[y].length; x++) {
-      if (graph[y][x].value != '#')
-        count += neighboursWithinManhattanDistance(
-          graph,
-          graph[y][x],
-          distance,
-          target
-        )
+  rxParents.forEach((parent) =>
+    parent.inputs?.keys().forEach((input) => grandParentHigh.set(input, -1))
+  )
+
+  let pressed = 0
+
+  while (modules.get('rx')!.high) {
+    pressed++
+    buttonPulses(modules, pressed, grandParentHigh)
+    if (grandParentHigh.values().every((v) => v != -1)) {
+      console.log(grandParentHigh.values())
+      return grandParentHigh.values().reduce((total, value) => value * total, 1)
     }
   }
-  return count
+  return pressed
 }
