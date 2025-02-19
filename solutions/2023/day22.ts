@@ -1,75 +1,137 @@
 export function partOne(input: string[]): number | string {
-  const secrets = input.map((x) => parseInt(x))
+  const bricks = parse(input)
+  bricksWithGravity(bricks)
+  const removable = new Set<number>(bricks.map((brick) => brick.id))
 
-  return secrets.reduce((total, secret) => {
-    for (let i = 0; i < 2000; i++) secret = getNextSecret(secret)
+  bricks.forEach((brick) => {
+    if (brick.supportedBy.size == 1)
+      removable.delete(brick.supportedBy.values().toArray()[0])
+  })
 
-    return total + secret
-  }, 0)
+  return removable.size
 }
 
-function getNextSecret(secret: number): number {
-  secret ^= secret << 6
-  secret = ((secret % 16777216) + 16777216) % 16777216
+interface Brick {
+  cubes: number[][]
+  supportedBy: Set<number>
+  supporting: Set<number>
+  id: number
+}
 
-  secret ^= secret >> 5
-  secret = ((secret % 16777216) + 16777216) % 16777216
+function parse(input: string[]): Brick[] {
+  const bricks: Brick[] = []
 
-  secret ^= secret << 11
-  return ((secret % 16777216) + 16777216) % 16777216
+  input.forEach((line, index) => {
+    const brickEnds = line
+      .split('~')
+      .map((c) => c.split(',').map((c) => parseInt(c)))
+
+    const cubes: number[][] = []
+    for (let x = brickEnds[0][0]; x <= brickEnds[1][0]; x++) {
+      for (let y = brickEnds[0][1]; y <= brickEnds[1][1]; y++) {
+        for (let z = brickEnds[0][2]; z <= brickEnds[1][2]; z++) {
+          cubes.push([x, y, z])
+        }
+      }
+    }
+
+    bricks.push({
+      cubes,
+      supportedBy: new Set<number>(),
+      supporting: new Set<number>(),
+      id: index,
+    })
+  })
+
+  return bricks
+}
+
+function bricksWithGravity(bricks: Brick[]): void {
+  const cubesOwnership = new Map<string, Brick>()
+  const bricksByZ = new Map<number, Brick[]>()
+
+  bricks.forEach((brick) => {
+    const lowestCubeZ = brick.cubes.reduce(
+      (min, cube) => (min < cube[2] ? min : cube[2]),
+      Infinity
+    )
+    if (bricksByZ.has(lowestCubeZ)) bricksByZ.get(lowestCubeZ)?.push(brick)
+    else bricksByZ.set(lowestCubeZ, [brick])
+  })
+
+  bricksByZ
+    .keys()
+    .toArray()
+    .sort((x, y) => x - y)
+    .forEach((key) => {
+      bricksByZ
+        .get(key)!
+        .values()
+        .forEach((brick) => dropBrick(brick, cubesOwnership))
+    })
+}
+
+function dropBrick(brick: Brick, cubesOwnership: Map<string, Brick>): void {
+  const dropDistance = findBottomDistance(brick.cubes, cubesOwnership)
+
+  brick.cubes.forEach((cube) => {
+    cube[2] -= dropDistance
+    cubesOwnership.set(cube.join(','), brick)
+    const below = cubesOwnership.get(
+      cube[0] + ',' + cube[1] + ',' + (cube[2] - 1)
+    )
+
+    if (below && below.id != brick.id) {
+      below.supporting.add(brick.id)
+      brick.supportedBy.add(below.id)
+    }
+  })
+}
+
+function findBottomDistance(
+  cubes: number[][],
+  cubesOwnership: Map<string, Brick>
+): number {
+  return cubes.reduce((min, cube) => {
+    for (let z = cube[2]; z > 0; z--) {
+      if (cubesOwnership.has(cube[0] + ',' + cube[1] + ',' + (z - 1))) {
+        return min < cube[2] - z ? min : cube[2] - z
+      }
+    }
+    return min < cube[2] ? min : cube[2]
+  }, Infinity)
 }
 
 export function partTwo(input: string[]): number | string {
-  const secrets = input.map((x) => parseInt(x))
-  const permTotals: number[][][][] = []
-  for (let i = 0; i < 19; i++) {
-    permTotals.push([])
-    for (let j = 0; j < 19; j++) {
-      permTotals[i].push([])
-      for (let k = 0; k < 19; k++) permTotals[i][j].push(Array(19).fill(0))
-    }
-  }
-  let max = 0
-  secrets.forEach(
-    (secret) => (max = countSecretTotals(secret, permTotals, max))
+  const bricks = parse(input)
+  bricksWithGravity(bricks)
+  const results = new Map<number, number>()
+
+  bricks.forEach((brick) =>
+    results.set(
+      brick.id,
+      countSupported(bricks, brick.id, new Set<number>([brick.id]))
+    )
   )
-  return max
+
+  return results.values().reduce((total, value) => total + value, 0)
 }
 
-function countSecretTotals(
-  secret: number,
-  permTotals: number[][][][],
-  max: number
-) {
-  const seen = new Set<number>()
-  const secretValues: number[] = [secret % 10]
-
-  for (let i = 0; i < 2000; i++) {
-    secret = getNextSecret(secret)
-    secretValues.push(secret % 10)
-
-    if (i > 2) {
-      const lastFour = [
-        9 + secretValues[i + 1] - secretValues[i],
-        9 + secretValues[i] - secretValues[i - 1],
-        9 + secretValues[i - 1] - secretValues[i - 2],
-        9 + secretValues[i - 2] - secretValues[i - 3],
-      ]
-      const s =
-        lastFour[0] * 1000000 +
-        lastFour[1] * 10000 +
-        lastFour[2] * 100 +
-        lastFour[3]
-
-      if (!seen.has(s)) {
-        const res =
-          permTotals[lastFour[0]][lastFour[1]][lastFour[2]][lastFour[3]] +
-          (secret % 10)
-        permTotals[lastFour[0]][lastFour[1]][lastFour[2]][lastFour[3]] = res
-        if (res > max) max = res
-        seen.add(s)
-      }
-    }
+function countSupported(
+  bricks: Brick[],
+  brickID: number,
+  fallen: Set<number>
+): number {
+  const brick = bricks[brickID]
+  if (
+    fallen.has(brickID) ||
+    brick.supportedBy.values().every((value) => fallen.has(value))
+  ) {
+    fallen.add(brickID)
+    brick.supporting.values().forEach((supported) => {
+      if (!fallen.has(supported)) countSupported(bricks, supported, fallen)
+    })
   }
-  return max
+
+  return fallen.size - 1
 }

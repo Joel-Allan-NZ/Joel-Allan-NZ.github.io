@@ -1,0 +1,296 @@
+---
+year: 2023
+puzz: 22
+title: Sand Slabs
+---
+
+## Part One
+
+Yet another part one based around modeling a system. My lazy approach to brick falling is just to populate the cube coordinates of each brick, then take bricks from the lowest un-moved Z, and move those bricks downward to the lowest Z where a intersection with another brick or the ground doesn't exist.
+
+<br />
+After moving each brick, I check for any bricks that are supporting it, and update
+sets of supporting/being supported by. Finally, the number of disintegratable bricks
+is equivalent to the total number of bricks, less any that are the sole support for
+others.{' '}
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partOne(input: string[]): number | string {
+  const bricks = parse(input)
+  bricksWithGravity(bricks)
+  const removable = new Set<number>(bricks.map((brick) => brick.id))
+
+  bricks.forEach((brick) => {
+    if (brick.supportedBy.size == 1)
+      removable.delete(brick.supportedBy.values().toArray()[0])
+  })
+
+  return removable.size
+}
+
+interface Brick {
+  cubes: number[][]
+  supportedBy: Set<number>
+  supporting: Set<number>
+  id: number
+}
+
+function parse(input: string[]): Brick[] {
+  const bricks: Brick[] = []
+
+  input.forEach((line, index) => {
+    const brickEnds = line
+      .split('~')
+      .map((c) => c.split(',').map((c) => parseInt(c)))
+
+    const cubes: number[][] = []
+    for (let x = brickEnds[0][0]; x <= brickEnds[1][0]; x++) {
+      for (let y = brickEnds[0][1]; y <= brickEnds[1][1]; y++) {
+        for (let z = brickEnds[0][2]; z <= brickEnds[1][2]; z++) {
+          cubes.push([x, y, z])
+        }
+      }
+    }
+
+    bricks.push({
+      cubes,
+      supportedBy: new Set<number>(),
+      supporting: new Set<number>(),
+      id: index,
+    })
+  })
+
+  return bricks
+}
+
+function bricksWithGravity(bricks: Brick[]): void {
+  const cubesOwnership = new Map<string, Brick>()
+  const bricksByZ = new Map<number, Brick[]>()
+
+  bricks.forEach((brick) => {
+    const lowestCubeZ = brick.cubes.reduce(
+      (min, cube) => (min < cube[2] ? min : cube[2]),
+      Infinity
+    )
+    if (bricksByZ.has(lowestCubeZ)) bricksByZ.get(lowestCubeZ)?.push(brick)
+    else bricksByZ.set(lowestCubeZ, [brick])
+  })
+
+  bricksByZ
+    .keys()
+    .toArray()
+    .sort((x, y) => x - y)
+    .forEach((key) => {
+      bricksByZ
+        .get(key)!
+        .values()
+        .forEach((brick) => dropBrick(brick, cubesOwnership))
+    })
+}
+
+function dropBrick(brick: Brick, cubesOwnership: Map<string, Brick>): void {
+  const dropDistance = findBottomDistance(brick.cubes, cubesOwnership)
+
+  brick.cubes.forEach((cube) => {
+    cube[2] -= dropDistance
+    cubesOwnership.set(cube.join(','), brick)
+    const below = cubesOwnership.get(
+      cube[0] + ',' + cube[1] + ',' + (cube[2] - 1)
+    )
+
+    if (below && below.id != brick.id) {
+      below.supporting.add(brick.id)
+      brick.supportedBy.add(below.id)
+    }
+  })
+}
+
+function findBottomDistance(
+  cubes: number[][],
+  cubesOwnership: Map<string, Brick>
+): number {
+  return cubes.reduce((min, cube) => {
+    for (let z = cube[2]; z > 0; z--) {
+      if (cubesOwnership.has(cube[0] + ',' + cube[1] + ',' + (z - 1))) {
+        return min < cube[2] - z ? min : cube[2] - z
+      }
+    }
+    return min < cube[2] ? min : cube[2]
+  }, Infinity)
+}
+```
+
+```csharp
+public override object PartOne()
+{
+    var bricks = Parse(Input);
+    BricksWithGravity(bricks);
+    HashSet<int> removable = bricks.Select(x => x.ID).ToHashSet();
+
+    foreach (var brick in bricks)
+    {
+        if (brick.SupportedBy.Count == 1)
+            removable.Remove(brick.SupportedBy.First());
+    }
+
+    return removable.Count;
+}
+
+private static List<Brick> Parse(string[] input)
+{
+    List<Brick> bricks = [];
+    for (int i = 0; i < input.Length; i++)
+    {
+        var b = input[i].Split("~")
+                        .Select(x => x.Split(',')
+                                      .Select(x => int.Parse(x))
+                                      .ToArray()).ToArray();
+
+        bricks.Add(new(b[0], b[1], i));
+    }
+    return bricks;
+}
+
+private static void BricksWithGravity(List<Brick> bricks)
+{
+    Dictionary<(int x, int y, int z), Brick> cubesOwnership = [];
+    Dictionary<int, List<Brick>> bricksByZ = bricks.GroupBy(brick => brick.Cubes.Min(x => x[2]))
+                                                   .ToDictionary(key => key.Key, value => value.ToList());
+
+    foreach (var brick in bricksByZ.OrderBy(x => x.Key).SelectMany(v => v.Value))
+        DropBrick(brick, cubesOwnership);
+}
+
+private static void DropBrick(Brick brick, Dictionary<(int x, int y, int z), Brick> cubesOwnership)
+{
+    var distance = FindBottomDistance(cubesOwnership, brick.Cubes);
+    foreach (var cube in brick.Cubes)
+        cube[2] -= distance;
+
+    foreach (var cube in brick.Cubes)
+    {
+        cubesOwnership[(cube[0], cube[1], cube[2])] = brick;
+
+        if (cubesOwnership.TryGetValue((cube[0], cube[1], cube[2] - 1), out var support) && support.ID != brick.ID)
+        {
+            support.Supporting.Add(brick.ID);
+            brick.SupportedBy.Add(support.ID);
+        }
+    }
+
+    static int FindBottomDistance(Dictionary<(int x, int y, int z), Brick> cubesOwnership, List<int[]> cubes)
+    {
+        return (cubes.Min(cube =>
+        {
+            for (int z = cube[2]; z > 0; z--)
+            {
+                if (cubesOwnership.ContainsKey((cube[0], cube[1], z - 1)))
+                    return cube[2] - z;
+            }
+            return cube[2];
+        }));
+    }
+}
+
+internal class Brick
+{
+    internal List<int[]> Cubes;
+    internal HashSet<int> SupportedBy = [];
+    internal HashSet<int> Supporting = [];
+    internal int ID;
+    public Brick(int[] coorda, int[] coordb, int iD)
+    {
+        ID = iD;
+        Cubes = [];
+        for (int x = coorda[0]; x <= coordb[0]; x++)
+        {
+            for (int y = coorda[1]; y <= coordb[1]; y++)
+            {
+                for (int z = coorda[2]; z <= coordb[2]; z++)
+                {
+                    Cubes.Add([x, y, z]);
+                }
+            }
+        }
+    }
+}
+```
+
+</CodeBox>
+
+## Part Two
+
+After part 1 was a reasonably involved model (by the standards of part 1s), I was expecting a real brainteaser for part 2. Instead it played very nicely with my part 1 solution, and it simply requires walking up the pile of bricks testing which would no longer be supported. No tricks here!
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partTwo(input: string[]): number | string {
+  const bricks = parse(input)
+  bricksWithGravity(bricks)
+  const results = new Map<number, number>()
+
+  bricks.forEach((brick) =>
+    results.set(
+      brick.id,
+      countSupported(bricks, brick.id, new Set<number>([brick.id]))
+    )
+  )
+
+  return results.values().reduce((total, value) => total + value, 0)
+}
+
+function countSupported(
+  bricks: Brick[],
+  brickID: number,
+  fallen: Set<number>
+): number {
+  const brick = bricks[brickID]
+  if (
+    fallen.has(brickID) ||
+    brick.supportedBy.values().every((value) => fallen.has(value))
+  ) {
+    fallen.add(brickID)
+    brick.supporting.values().forEach((supported) => {
+      if (!fallen.has(supported)) countSupported(bricks, supported, fallen)
+    })
+  }
+
+  return fallen.size - 1
+}
+```
+
+```csharp
+public override object PartTwo()
+{
+    var bricks = Parse(Input);
+    BricksWithGravity(bricks);
+
+    Dictionary<int, int> results = [];
+
+    foreach (var brick in bricks)
+        results[brick.ID] = CountSupported(bricks, brick.ID, [brick.ID]);
+
+    return results.Values.Sum();
+
+}
+
+private static int CountSupported(List<Brick> bricks, int brickID, HashSet<int> fallen)
+{
+    var brick = bricks[brickID];
+
+    if (fallen.Contains(brick.ID) || brick.SupportedBy.All(x => fallen.Contains(x)))
+    {
+        fallen.Add(brickID);
+        foreach (var supported in brick.Supporting)
+            if (!fallen.Contains(supported))
+                CountSupported(bricks, supported, fallen);
+
+    }
+    return fallen.Count - 1;
+}
+```
+
+</CodeBox>
