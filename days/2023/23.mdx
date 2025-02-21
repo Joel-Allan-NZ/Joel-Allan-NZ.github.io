@@ -1,0 +1,397 @@
+---
+year: 2023
+puzz: 23
+title: A Long Walk
+---
+
+## Part One
+
+As the slopes make the input a [DAG](https://en.wikipedia.org/wiki/Directed_acyclic_graph), it's possible to find a longest path with a [BFS](https://en.wikipedia.org/wiki/Breadth-first_search), with only a touch of logic to handle the slippery slopes. Although I opted not to bother, it would be trivial to treat this as a weighted graph: each point where slopes meet can also be treated as a node; the spaces between them are direct (albeit not 'straight') and allow for no decision making.
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partOne(input: string[]): number | string {
+  const start = [input[0].indexOf('.'), 0]
+  const end = [input[input.length - 1].indexOf('.'), input.length - 1]
+  const queue: number[][] = [start]
+  const distances = new Map<string, number>()
+  distances.set(start.join(','), 0)
+
+  while (queue.length > 0) {
+    const current = queue.shift()!
+    const neighbours = findOrthogonalNeighbours(current, input)
+    const oldDistance = distances.get(current.join(','))!
+
+    neighbours.forEach((neighbour) => {
+      const distance = distances.get(neighbour.join(','))
+      if (!distance || distance < oldDistance - 1) {
+        distances.set(neighbour.join(','), oldDistance + 1)
+        const next = handleSlopes(input, neighbour)
+        if (next[0] != current[0] || next[1] != current[1]) {
+          if (next[0] != neighbour[0] || next[1] != neighbour[1]) {
+            distances.set(next.join(','), oldDistance + 2)
+          }
+          queue.push(next)
+        }
+      }
+    })
+  }
+
+  return distances.get(end.join(','))!
+}
+
+function handleSlopes(input: string[], coords: number[]): number[] {
+  switch (input[coords[1]][coords[0]]) {
+    case '>':
+      return [coords[0] + 1, coords[1]]
+    case '<':
+      return [coords[0] - 1, coords[1]]
+    case '^':
+      return [coords[0], coords[1] - 1]
+    case 'v':
+      return [coords[0], coords[1] + 1]
+    default:
+      return coords
+  }
+}
+
+function findOrthogonalNeighbours(
+  coords: number[],
+  input: string[]
+): number[][] {
+  return [
+    [coords[0] + 1, coords[1]],
+    [coords[0] - 1, coords[1]],
+    [coords[0], coords[1] - 1],
+    [coords[0], coords[1] + 1],
+  ].filter((step) => inBounds(step, input) && input[step[1]][step[0]] != '#')
+}
+
+function inBounds(coords: number[], input: string[]) {
+  return (
+    coords[0] > -1 &&
+    coords[1] > -1 &&
+    coords[0] < input[0].length &&
+    coords[1] < input.length
+  )
+}
+```
+
+```csharp
+public override object PartOne()
+{
+    var start = (Input[0].IndexOf('.'), 0);
+    var end = (Input[^1].IndexOf('.'), Input.Length - 1);
+    Queue<(int x, int y)> toVisit = new();
+    Dictionary<(int x, int y), int> distances = [];
+    toVisit.Enqueue(start);
+    distances[start] = 0;
+
+    while (toVisit.Count > 0)
+    {
+        var (x, y) = toVisit.Dequeue();
+        foreach (var neighbour in FindValidNeighbours([x, y], Input))
+        {
+            if (distances.TryGetValue((neighbour[0], neighbour[1]), out var dist) && dist >= distances[(x, y)] - 1)
+                continue;
+
+            distances[(neighbour[0], neighbour[1])] = distances[(x, y)] + 1;
+            var next = HandleSlopes(Input[neighbour[1]][neighbour[0]], neighbour[0], neighbour[1]);
+            if (next.x != x || next.y != y)
+            {
+                if (next.x != neighbour[0] || next.y != neighbour[1])
+                {
+                    distances[next] = distances[(x, y)] + 2;
+                }
+                toVisit.Enqueue(next);
+            }
+        }
+    }
+    return distances[end];
+}
+
+private static (int x, int y) HandleSlopes(char slope, int x, int y)
+{
+    return slope switch
+    {
+        '>' => (x + 1, y),
+        '<' => (x - 1, y),
+        '^' => (x, y - 1),
+        'v' => (x, y + 1),
+        _ => (x, y)
+    };
+}
+
+private static IEnumerable<int[]> FindValidNeighbours(int[] coord, string[] input)
+{
+    int[][] steps = [[coord[0] + 1, coord[1]], [coord[0] - 1, coord[1]], [coord[0], coord[1] + 1], [coord[0], coord[1] - 1]];
+    return steps.Where(x => InBounds(x[0], x[1], input) && input[x[1]][x[0]] != '#');
+
+    static bool InBounds(int x, int y, string[] input) => x > -1 && x < input.Length && y > -1 && y < input[0].Length;
+}
+```
+
+</CodeBox>
+
+## Part Two
+
+This part was a little trickier to get to an appropriate speed!
+
+<br />
+The [longest path problem](https://en.wikipedia.org/wiki/Longest_path_problem) states
+this is [NP-hard](https://en.wikipedia.org/wiki/NP-hardness), and to avoid cycles
+requires remembering the path taken. It's fairly trivial to bruteforce with a [DFS](https://en.wikipedia.org/wiki/Depth-first_search),
+but that unsurprisingly has less-than-desirable speeds.
+<br />
+To simplify the problem, I processed it to the weighted graph I mentioned in part
+1, and used bitwise operations to efficiently remember nodes travelled on a path
+(which I usually avoid in these problems, for legibility). The performance was still
+a little slower than my taste, and after trying half a dozen other approaches I resorted
+to checking for some community ideas. I came across one quite simple time-saver -
+the edges between outer vertices of the graph can be treated as directed; only moving
+from the start towards the end. This is a property of the inputs given, rather than
+a generic solution, but it cut the DFS time enough for me to pleased with the finished
+product.
+<br />
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partTwo(input: string[]): number | string {
+  const start = [input[0].indexOf('.'), 0]
+  const end = [input.length - 1, input[input.length - 1].indexOf('.')]
+  const adjancencies = findAdjacencies(input, start, end)
+
+  return findLongest(adjancencies, 0, 0n, 0)
+}
+
+function findLongest(
+  nodes: Map<number, number>[],
+  current: number,
+  bitmask: bigint,
+  distance: number
+): number {
+  let max = distance
+  nodes[current].entries().forEach((child) => {
+    const big = 1n << BigInt(child[0])
+    if ((bitmask & big) == 0n) {
+      max = Math.max(
+        max,
+        findLongest(nodes, child[0], bitmask | big, distance + child[1])
+      )
+    }
+  })
+  return max
+}
+
+function findAdjacencies(
+  input: string[],
+  start: number[],
+  end: number[]
+): Map<number, number>[] {
+  const adjacencies: number[][] = [start, end]
+
+  input.forEach((line, y) => {
+    line.split('').forEach((c, x) => {
+      if (c == '.') {
+        const neighbours = findOrthogonalNeighbours([x, y], input).filter(
+          (x) => input[x[1]][x[0]] != '.'
+        )
+        if (neighbours.length > 2) adjacencies.push([x, y])
+      }
+    })
+  })
+
+  return connectNodes(adjacencies, input)
+}
+
+function connectNodes(
+  nodes: number[][],
+  input: string[]
+): Map<number, number>[] {
+  const queue: number[][] = []
+  const visited = new Set<string>()
+  const dicts: Map<number, number>[] = []
+  nodes.forEach((x) => dicts.push(new Map<number, number>()))
+
+  nodes.forEach((node) => {
+    visited.clear()
+    queue.push([...node, 0])
+
+    while (queue.length > 0) {
+      const current = queue.shift()!
+      const neighbours = findOrthogonalNeighbours(current, input)
+
+      for (let n of neighbours) {
+        if (n[0] == node[0] && n[1] == node[1]) continue
+        const index = nodes.findIndex((x) => x[0] == n[0] && x[1] == n[1])
+        if (index != -1) {
+          const existingIndex = nodes.indexOf(node)
+          let existing = dicts[existingIndex].get(index)
+          existing = Math.max(current[2] + 1, existing ?? 0)
+          dicts[existingIndex].set(index, existing)
+          dicts[index].set(existingIndex, existing)
+        } else if (!visited.has(n.join(','))) {
+          visited.add(n.join(','))
+          queue.push([...n, current[2] + 1])
+        }
+      }
+    }
+  })
+
+  communityOptimization(dicts, nodes)
+  return dicts
+}
+
+function communityOptimization(
+  dicts: Map<number, number>[],
+  nodes: number[][]
+): void {
+  const originalOrder = [...nodes]
+
+  const top = nodes
+    .sort((x, y) => x[1] - y[1])
+    .slice(0, 6)
+    .sort((x, y) => y[0] - x[0])
+    .map((t) => originalOrder.indexOf(t))
+
+  const bottom = nodes
+    .sort((x, y) => y[1] - x[1])
+    .slice(0, 6)
+    .sort((x, y) => y[0] - x[0])
+    .map((t) => originalOrder.indexOf(t))
+
+  const left = nodes
+    .sort((x, y) => x[0] - y[0])
+    .slice(0, 6)
+    .sort((x, y) => y[1] - x[1])
+    .map((t) => originalOrder.indexOf(t))
+  const right = nodes
+    .sort((x, y) => y[0] - x[0])
+    .slice(0, 6)
+    .sort((x, y) => y[1] - x[1])
+    .map((t) => originalOrder.indexOf(t))
+
+  for (let i = 0; i < 5; i++) {
+    top.slice(i + 1).forEach((node) => dicts[top[i]].delete(node))
+    bottom.slice(i + 1).forEach((node) => dicts[bottom[i]].delete(node))
+    left.slice(i + 1).forEach((node) => dicts[left[i]].delete(node))
+    right.slice(i + 1).forEach((node) => dicts[right[i]].delete(node))
+  }
+}
+```
+
+```csharp
+public override object PartTwo()
+{
+    var adjacencies = FindAdjacencies(Input);
+    var compressed = FindAdjacentDecisionsPoints(adjacencies, Input);
+
+    return FindLongest(compressed, 0, 0, 0);
+}
+
+private static int FindLongest(Dictionary<int, int>[] nodes, int current, long bitmask, int distance)
+{
+    var max = distance;
+    foreach (var child in nodes[current])
+    {
+        if ((bitmask & (1L << child.Key)) == 0)
+            max = Math.Max(max, FindLongest(nodes, child.Key, (bitmask | (1L << child.Key)), distance + child.Value));
+    }
+    return max;
+}
+
+private static Dictionary<(int x, int y), Dictionary<(int x, int y), int>> FindAdjacencies(string[] input)
+{
+    Dictionary<(int x, int y), Dictionary<(int x, int y), int>> adjacencies = [];
+    adjacencies.Add((x: input[0].IndexOf('.'), y: 0), []);
+    adjacencies.Add((x: input[^1].IndexOf('.'), y: input.Length - 1), []);
+
+    for (int y = 0; y < input.Length; y++)
+    {
+        for (int x = 0; x < input[0].Length; x++)
+        {
+            if (input[y][x] == '.' && FindValidNeighbours([x, y], input).Count(x => input[x[1]][x[0]] != '.') > 2)
+            {
+                adjacencies.Add((x, y), []);
+            }
+        }
+    }
+
+    return adjacencies;
+}
+
+private static Dictionary<int, int>[] FindAdjacentDecisionsPoints(Dictionary<(int x, int y), Dictionary<(int x, int y), int>> adjacencies, string[] input)
+{
+    Queue<(int x, int y, int distance)> toVisit = new();
+    HashSet<(int x, int y)> visited = [];
+    foreach (var adjacency in adjacencies.Keys)
+    {
+        visited.Clear();
+        toVisit.Enqueue((adjacency.x, adjacency.y, 0));
+        while (toVisit.Count > 0)
+        {
+            var (x, y, distance) = toVisit.Dequeue();
+            foreach (var neighbour in FindValidNeighbours([x, y], input))
+            {
+                var tuple = (neighbour[0], neighbour[1]);
+                if (adjacency.x == neighbour[0] && adjacency.y == neighbour[1] || visited.Contains(tuple))
+                    continue;
+
+                if (adjacencies.ContainsKey(tuple))
+                {
+                    if (!adjacencies[adjacency].TryGetValue(tuple, out int value) || value < distance + 1)
+                        adjacencies[adjacency][tuple] = distance + 1;
+                }
+                else if (!visited.Contains(tuple))
+                {
+                    toVisit.Enqueue((neighbour[0], neighbour[1], distance + 1));
+                }
+
+                visited.Add(tuple);
+            }
+        }
+    }
+
+    CommunityOptimization(adjacencies);
+    return Simplify(adjacencies);
+}
+
+private static Dictionary<int, int>[] Simplify(Dictionary<(int x, int y), Dictionary<(int x, int y), int>> adjacencies)
+{
+    List<(int x, int y)> keys = [.. adjacencies.Keys];
+    Dictionary<int, int>[] adj = new Dictionary<int, int>[keys.Count];
+
+    foreach (var kvp in adjacencies)
+    {
+        var index = keys.IndexOf(kvp.Key);
+        adj[index] = [];
+
+        foreach (var kvp2 in kvp.Value)
+        {
+            var i = keys.IndexOf(kvp2.Key);
+            adj[index].Add(i, kvp2.Value);
+        }
+    }
+    return adj;
+}
+
+private static void CommunityOptimization(Dictionary<(int x, int y), Dictionary<(int x, int y), int>> adjacencies)
+{
+    var top = adjacencies.OrderBy(x => x.Key.y).Take(6).OrderByDescending(y => y.Key.x).ToList();
+    var bottom = adjacencies.OrderByDescending(x => x.Key.y).Take(6).OrderByDescending(y => y.Key.x).ToList();
+    var left = adjacencies.OrderBy(x => x.Key.x).Take(6).OrderByDescending(y => y.Key.y).ToList();
+    var right = adjacencies.OrderByDescending(x => x.Key.x).Take(6).OrderByDescending(y => y.Key.y).ToList();
+
+    for (int i = 0; i < 5; i++)
+    {
+        top[(i + 1)..].ForEach(x => top[i].Value.Remove(x.Key));
+        bottom[(i + 1)..].ForEach(x => bottom[i].Value.Remove(x.Key));
+        left[(i + 1)..].ForEach(x => left[i].Value.Remove(x.Key));
+        right[(i + 1)..].ForEach(x => right[i].Value.Remove(x.Key));
+    }
+}
+```
+
+</CodeBox>
