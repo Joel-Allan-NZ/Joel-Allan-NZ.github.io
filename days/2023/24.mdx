@@ -1,0 +1,280 @@
+---
+year: 2023
+puzz: 24
+title: Never Tell Me The Odds
+---
+
+## Part One
+
+This is all about [line-line intersection](https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection). The specific apoproach I'm using is to find the time distance between the current point and the intercept, and using that to find said intercept point. It should be trivial to roll the past-checking aspect of whether an intercept is valid into this method, but I've separated them here in the interest of legibility.
+
+<br />
+There ought to be a number of different valid mathematical approaches here, but this
+one was sufficiently fast to be fit for purpose. I'm more worried about what Part
+2 will entail than refining this further.
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partOne(input: string[]): number | string {
+  const hail = parse(input)
+  const MIN = 200000000000000
+  const MAX = 400000000000000
+
+  let count = 0
+  for (let i = 0; i < hail.length; i++) {
+    for (let j = i + 1; j < hail.length; j++) {
+      const inter = intercept(hail[i], hail[j])
+      if (isValidIntercept(hail[i], hail[j], inter, MIN, MAX)) {
+        count++
+      }
+    }
+  }
+  return count
+}
+
+function parse(input: string[]): number[][][] {
+  const hail: number[][][] = []
+  input.forEach((line) => {
+    const split = line.split('@')
+    hail.push(split.map((x) => x.split(', ').map((x) => parseInt(x))))
+  })
+  return hail
+}
+
+function intercept(a: number[][], b: number[][]): number[] {
+  if (a[1][1] * b[1][0] - a[0][0] * b[1][1] == 0) return [-1, -1]
+
+  const numerator =
+    a[0][0] * b[1][1] -
+    a[0][1] * b[1][0] -
+    b[0][0] * b[1][1] +
+    b[0][1] * b[1][0]
+  const denominator = a[1][1] * b[1][0] - a[1][0] * b[1][1]
+
+  const lambda = numerator / denominator
+
+  return [a[0][0] + lambda * a[1][0], a[0][1] + lambda * a[1][1]]
+}
+
+function isValidIntercept(
+  a: number[][],
+  b: number[][],
+  intercept: number[],
+  min: number,
+  max: number
+): boolean {
+  if (
+    intercept.some(
+      (i, index) =>
+        (i < a[0][index] && a[1][index] > 0) ||
+        (i < b[0][index] && b[1][index] > 0)
+    )
+  )
+    return false
+  if (
+    intercept.some(
+      (i, index) =>
+        (i > a[0][index] && a[1][index] < 0) ||
+        (i > b[0][index] && b[1][index] < 0)
+    )
+  )
+    return false
+
+  return intercept.every((i) => i >= min && i <= max)
+}
+```
+
+```csharp
+public override object PartOne()
+{
+    var hail = Parse(Input);
+    long MIN = 200000000000000;
+    long MAX = 400000000000000;
+
+    return hail.UniquePairs().Count(pair =>
+    {
+        var inter = Intercept(pair[0], pair[1]);
+        return !IsInterceptInPast(pair, inter) && inter[0] >= MIN && inter[0] <= MAX && inter[1] >= MIN && inter[1] <= MAX;
+    });
+}
+
+private static bool IsInterceptInPast(Hail[] pair, decimal[] inter)
+{
+    if (inter[0] < pair[0].Position[0] && pair[0].Velocity[0] > 0 || inter[0] < pair[1].Position[0] && pair[1].Velocity[0] > 0)
+        return true;
+    if (inter[1] < pair[0].Position[1] && pair[0].Velocity[1] > 0 || inter[1] < pair[1].Position[1] && pair[1].Velocity[1] > 0)
+        return true;
+    if (inter[0] > pair[0].Position[0] && pair[0].Velocity[0] < 0 || inter[0] > pair[1].Position[0] && pair[1].Velocity[0] < 0)
+        return true;
+    if (inter[1] > pair[0].Position[1] && pair[0].Velocity[1] < 0 || inter[1] > pair[1].Position[1] && pair[1].Velocity[1] < 0)
+        return true;
+    return false;
+}
+
+private static decimal[] Intercept(Hail a, Hail b)
+{
+    if (a.Velocity[1] * b.Velocity[0] - a.Velocity[0] * b.Velocity[1] == 0)
+        return [-1, -1];
+
+    var numerator = (a.Position[0] * b.Velocity[1] - a.Position[1] * b.Velocity[0] - b.Position[0] * b.Velocity[1] + b.Position[1] * b.Velocity[0]);
+    var denominator = (a.Velocity[1] * b.Velocity[0] - a.Velocity[0] * b.Velocity[1]);
+    var lambda = numerator / denominator;
+
+    return [a.Position[0] + lambda * a.Velocity[0], a.Position[1] + lambda * a.Velocity[1]];
+}
+
+internal class Hail(decimal[] position, decimal[] velocity)
+{
+    internal decimal[] Position = position;
+    internal decimal[] Velocity = velocity;
+}
+
+private static List<Hail> Parse(string[] input)
+{
+    List<Hail> hail = [];
+    foreach (var line in input)
+    {
+        var split = line.Split("@");
+        hail.Add(new(split[0].Split([',', ' '], StringSplitOptions.RemoveEmptyEntries).Select(x => decimal.Parse(x)).ToArray(),
+                    split[1].Split([',', ' '], StringSplitOptions.RemoveEmptyEntries).Select(x => decimal.Parse(x)).ToArray()));
+    }
+    return hail;
+}
+```
+
+</CodeBox>
+
+## Part Two
+
+Argh, now this one was a toughie. The hardest puzzle in years (for me, at least).
+
+<br />
+The more obvious approach involves linear algebra and finding a possible intersect
+path for any 3 stones. Implementing a solution that way however, proved difficult
+to debug; hunting possible algebraic errors as well as programming ones while also
+keeping the very large input values meaningful and precise was a headache. After
+more debugging time than I'd like to admit I resorted to the wisdom of crowds, and
+was gifted with this very tidy solution.
+<br />
+The idea is that there are a (limited) number of hailstones with identical velocities
+in a dimension. Those identical velocities guarantee that their relative distance
+will always be the same at it was at the beginning, and greatly limits the possible
+velocities our thrown stone could have. Testing all pairs of same-velocity stones
+with a reasonable range of possible velocities quite quickly reduces down to only
+a single possible velocity vector, from which we can calculate our starting position.{' '}
+
+<CodeBox names="typescript|C#">
+
+```ts
+export function partTwo(input: string[]): number | string {
+  const hail = parse(input)
+  const velocityVector = findIntersectVelocity(hail)
+
+  const a = hail[0]
+  const ab = [a, hail[1]]
+
+  const m = ab.map(
+    (x) => (x[1][1] - velocityVector[1]) / (x[1][0] - velocityVector[0])
+  )
+  const c = ab.map((x, index) => x[0][1] - m[index] * x[0][0])
+
+  const x = Math.floor((c[1] - c[0]) / (m[0] - m[1]))
+  const y = Math.floor(m[0] * x + c[0])
+  const z =
+    a[0][2] +
+    ((a[1][2] - velocityVector[2]) * (x - a[0][0])) /
+      (a[1][0] - velocityVector[0])
+
+  return x + y + z
+}
+
+function findIntersectVelocity(hail: number[][][]): number[] {
+  const sets = [new Set<number>(), new Set<number>(), new Set<number>()]
+
+  for (let i = 0; i < hail.length; i++) {
+    for (let j = i + 1; j < hail.length; j++) {
+      for (let k = 0; k < 3; k++) {
+        const res = findPotentialIntersectVelocity(hail[i], hail[j], k, 2000)
+        if (res.size > 0) {
+          sets[k] = sets[k].size > 0 ? sets[k].intersection(res) : res
+        }
+      }
+    }
+  }
+  return sets.map((x) => x.values().toArray()[0])
+}
+
+function findPotentialIntersectVelocity(
+  a: number[][],
+  b: number[][],
+  vectorDimension: number,
+  speedRange: number
+): Set<number> {
+  const potential = new Set<number>()
+  if (a[1][vectorDimension] == b[1][vectorDimension]) {
+    const diff = b[0][vectorDimension] - a[0][vectorDimension]
+    for (let v = -1 * speedRange; v <= speedRange; v++) {
+      const c = v - a[1][vectorDimension]
+      if (c != 0 && diff != 0 && ((diff % c) + c) % c == 0) potential.add(v)
+    }
+  }
+  return potential
+}
+```
+
+```csharp
+public override object PartTwo()
+{
+    var hail = Parse(Input);
+    var velocityVector = FindIntersectVelocity(hail);
+
+    var a = hail[0];
+    Hail[] ab = [a, hail[1]];
+
+    var m = ab.Select(x => (x.Velocity[1] - velocityVector[1]) / (x.Velocity[0] - velocityVector[0])).ToArray();
+    var c = ab.Select((x, index) => x.Position[1] - (m[index] * x.Position[0])).ToArray();
+
+    var x = Math.Floor((c[1] - c[0]) / (m[0] - m[1]));
+    var y = Math.Floor(m[0] * x + c[0]);
+    var z = a.Position[2] + (a.Velocity[2] - velocityVector[2]) * (x - a.Position[0]) / (a.Velocity[0] - velocityVector[0]);
+
+    return x + y + z;
+}
+
+private static int[] FindIntersectVelocity(List<Hail> hail)
+{
+    HashSet<int>?[] sets = [null, null, null];
+
+    foreach (var pair in hail.UniquePairs())
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            var res = FindPotentialIntersectVelocity(pair[0], pair[1], i, 2000);
+            if (res.Count > 0)
+                (sets[i] ??= res).IntersectWith(res);
+        }
+    }
+
+    return sets!.Select(x => x!.First()).ToArray();
+}
+
+private static HashSet<int> FindPotentialIntersectVelocity(Hail a, Hail b, int vectorDimension, int speedRange)
+{
+    HashSet<int> potentialIntersectVelocities = [];
+    if (a.Velocity[vectorDimension] == b.Velocity[vectorDimension])
+    {
+        var diff = b.Position[vectorDimension] - a.Position[vectorDimension];
+        for (int v = -1 * speedRange; v <= speedRange; v++)
+        {
+            var c = v - a.Velocity[vectorDimension];
+
+            if (c != 0 && diff != 0 && (((diff % c) + c) % c) == 0)
+                potentialIntersectVelocities.Add(v);
+        }
+    }
+    return potentialIntersectVelocities;
+}
+```
+
+</CodeBox>
