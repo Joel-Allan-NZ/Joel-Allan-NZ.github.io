@@ -6,32 +6,180 @@ title: Snowverload
 
 ## Part One
 
-ph
+The idea here is that we need to find a [min cut](https://en.wikipedia.org/wiki/Minimum_cut) of the input, such that with exactly 3 cuts we have two disjoint sets.
+
+<br />
+Purely for the novelty of it, I opted to use [Karger's algorithm](https://en.wikipedia.org/wiki/Karger%27s_algorithm),
+which is non-deterministic! The implemented solution will run infinitely until a
+valid cut is found, and depending on your luck this could be instant or take several
+seconds.
+<br />
+It breaks my general rule of fast and reliable solutions, but I can't remember the
+last time I had a chance to acutally *use* a non-deterministic algorithm. It's day
+25, I'm going to live a little.
 
 <CodeBox names="typescript|C#">
 
 ```ts
-function pie()
+export function partOne(input: string[]): number | string {
+  const graph = new Map<string, Map<string, number>>()
+  for (let line of input) {
+    const split = line.split(' ')
+    const a = split[0].slice(0, 3)
+
+    if (!graph.has(a)) graph.set(a, new Map<string, number>())
+
+    for (let add of split.slice(1)) {
+      if (!graph.has(add)) graph.set(add, new Map<string, number>())
+
+      graph.get(a)!.set(add, 1)
+      graph.get(add)!.set(a, 1)
+    }
+  }
+
+  while (true) {
+    const copy = new Map<string, Map<string, number>>()
+    graph.keys().forEach((key) => {
+      copy.set(key, new Map<string, number>())
+      graph
+        .get(key)!
+        .entries()
+        .forEach((v) => copy.get(key)!.set(v[0], v[1]))
+    })
+    const count = karger(copy)
+    const entries = copy.entries().toArray()
+
+    if (entries[0][1].get(entries[1][0]) == 3) {
+      return count.get(entries[0][0])! * count.get(entries[1][0])!
+    }
+  }
+}
+
+function karger(graph: Map<string, Map<string, number>>): Map<string, number> {
+  const count = new Map<string, number>()
+  graph.keys().forEach((key) => count.set(key, 1))
+
+  while (graph.size > 2) {
+    const edge = getRandomEdge(graph)
+    merge(graph, edge)
+    const newCount = count.get(edge[0])! + count.get(edge[1])!
+    count.set(edge[0], newCount)
+  }
+  return count
+}
+
+function getRandomEdge(graph: Map<string, Map<string, number>>): string[] {
+  const u = graph.keys().toArray()[Math.floor(Math.random() * graph.size)]
+  const vSize = graph.get(u)!.size
+  const v = graph.get(u)!.keys().toArray()[Math.floor(Math.random() * vSize)]
+
+  return [u, v]
+}
+
+function merge(graph: Map<string, Map<string, number>>, edge: string[]): void {
+  const vEdges = graph.get(edge[1])!.entries().toArray()
+
+  for (let e of vEdges) {
+    if (e[0] != edge[0]) {
+      let uDistance = graph.get(edge[0])?.get(e[0])
+      uDistance ??= 0
+      graph.get(edge[0])?.set(e[0], e[1] + uDistance)
+
+      graph.get(e[0])?.set(edge[0], graph.get(edge[0])!.get(e[0])!)
+    }
+    graph.get(e[0])?.delete(edge[1])
+  }
+
+  graph.get(edge[0])?.delete(edge[1])
+  graph.delete(edge[1])
+}
 ```
 
 ```csharp
-public void pie()
+public override object PartOne()
+{
+    Dictionary<string, Dictionary<string, int>> adjacent = [];
+
+    foreach (var line in Input)
+    {
+        var split = line.Split(" ");
+        if (!adjacent.ContainsKey(split[0][0..3]))
+            adjacent[split[0][0..3]] = [];
+
+        foreach (var add in split[1..])
+        {
+            if (!adjacent.ContainsKey(add))
+                adjacent[add] = [];
+
+            adjacent[split[0][0..3]].Add(add, 1);
+            adjacent[add].Add(split[0][0..3], 1);
+        }
+    }
+
+    return KargerMinCut(adjacent);
+}
+
+private static int KargerMinCut(Dictionary<string, Dictionary<string, int>> graph)
+{
+    Random rand = new();
+
+    while (true)
+    {
+        var copyGraph = graph.ToDictionary(entry => entry.Key, value => value.Value.ToDictionary(x => x.Key, y => y.Value));
+        var count = Karger(copyGraph, rand);
+        if (copyGraph.First().Value[copyGraph.Last().Key] == 3)
+            return count[copyGraph.First().Key] * count[copyGraph.Last().Key];
+    }
+}
+
+private static Dictionary<string, int> Karger(Dictionary<string, Dictionary<string, int>> graph, Random rand)
+{
+    Dictionary<string, int> count = [];
+    foreach (var key in graph.Keys)
+    {
+        count[key] = 1;
+    }
+
+    while (graph.Count > 2)
+    {
+        var (u, v) = GetRandomEdge(graph, rand);
+        Merge(graph, u, v);
+        count[u] += count[v];
+    }
+    return count;
+
+}
+
+private static (string, string) GetRandomEdge(Dictionary<string, Dictionary<string, int>> graph, Random rand)
+{
+    var u = graph.Keys.ElementAt(rand.Next(graph.Count));
+    var v = graph[u].ElementAt(rand.Next(graph[u].Count));
+    return (u, v.Key);
+}
+
+private static void Merge(Dictionary<string, Dictionary<string, int>> graph, string edge, string v)
+{
+    foreach (var e in graph[v].ToList())
+    {
+        if (e.Key != edge)
+        {
+            if (graph[edge].ContainsKey(e.Key))
+                graph[edge][e.Key] += e.Value;
+            else
+                graph[edge][e.Key] = e.Value;
+
+            graph[e.Key][edge] = graph[edge][e.Key];
+
+        }
+        graph[e.Key].Remove(v);
+    }
+    graph[edge].Remove(v);
+    graph.Remove(v);
+}
 ```
 
 </CodeBox>
 
 ## Part Two
 
-pgh
-
-<CodeBox names="typescript|C#">
-
-```ts
-function pie()
-```
-
-```csharp
-public void pie()
-```
-
-</CodeBox>
+Part two of Christmas Day is always a free star ⭐
