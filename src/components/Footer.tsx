@@ -2,7 +2,7 @@ import React from 'react'
 
 export default function Footer() {
   return (
-    <footer>
+    <footer className="h-[0.05vh] mt-5">
       <span className="flex place-content-center">
         <a
           className="mx-2"

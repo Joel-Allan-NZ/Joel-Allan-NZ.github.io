@@ -17,10 +17,11 @@ export default function Layout({
   children: any
 }) {
   return (
-    <div className="max-h-1vh">
+    <>
       <Header />
-      <AdventSideNav>
-        <div className="adventofcode max-w-[70%] ml-[10%] ">
+      <div className="max-h-0.95">
+        <AdventSideNav />
+        <div className="adventofcode max-w-[60%] ml-[20%]">
           <h1>
             <a
               href={`https://adventofcode.com/${pageContext.year}/day/${pageContext.puzz}`}
@@ -37,10 +38,10 @@ export default function Layout({
           ) : (
             <></>
           )}
-          <Footer />
         </div>
-      </AdventSideNav>
-    </div>
+      </div>
+      <Footer />
+    </>
   )
 }
 

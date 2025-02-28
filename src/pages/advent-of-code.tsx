@@ -9,8 +9,9 @@ export default function AdventOfCodeYearIndex() {
   return (
     <>
       <Header />
-      <AdventSideNav>
-        <div className="adventofcode max-w-[70%] ml-[10%]">
+      <div className="max-h-screen flex-row ">
+        <AdventSideNav />
+        <div className="adventofcode max-w-[70%] ml-[15%] h-[90%] overflow-y-auto">
           <h1>Advent of Code</h1>
           <br />
           <p>
@@ -64,8 +65,18 @@ export default function AdventOfCodeYearIndex() {
             AoC explicitly asks users{' '}
             <a href="https://adventofcode.com/2024/about">not to</a> :)
           </p>
+          <br />
+          <br />
+          <h2>Do you use libraries/packages/etc ?</h2>
+          <p>
+            No, that would be defeating the point. On occassion I do get lazy
+            (especially with C# answers) and fail to remove calls to extension
+            methods or other code that live outside of the solution file. These
+            are typically very basic utility methods, and hopefully any I use
+            will be visible <a href="c-sharp-extensions">here</a>.
+          </p>
         </div>
-      </AdventSideNav>
+      </div>
       <Footer />
     </>
   )

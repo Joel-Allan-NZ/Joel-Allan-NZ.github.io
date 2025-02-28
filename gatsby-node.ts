@@ -30,18 +30,24 @@ exports.createPages = async ({ graphql, actions, reporter }) => {
   const posts = result.data.allMdx.nodes
 
   // you'll call `createPage` for each result
-  posts.forEach((node) => {
-    createPage({
-      // As mentioned above you could also query something else like frontmatter.title above and use a helper function
-      // like slugify to create a slug
-      path: `advent-of-code/${node.frontmatter.year}/${node.frontmatter.puzz}`,
-      component: `${template}?__contentFilePath=${node.internal.contentFilePath}`,
-      context: {
-        id: node.id,
-        puzz: node.frontmatter.puzz,
-        year: node.frontmatter.year,
-        title: node.frontmatter.title,
-      },
-    })
-  })
+  posts
+    .filter((x) => x.frontmatter.year == '2023')
+    .forEach(
+      (node: {
+        frontmatter: { year: any; puzz: any; title: any }
+        internal: { contentFilePath: any }
+        id: any
+      }) => {
+        createPage({
+          path: `advent-of-code/${node.frontmatter.year}/${node.frontmatter.puzz}`,
+          component: `${template}?__contentFilePath=${node.internal.contentFilePath}`,
+          context: {
+            id: node.id,
+            puzz: node.frontmatter.puzz,
+            year: node.frontmatter.year,
+            title: node.frontmatter.title,
+          },
+        })
+      }
+    )
 }
