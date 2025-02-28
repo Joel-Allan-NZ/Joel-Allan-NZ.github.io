@@ -1,28 +1,14 @@
 import { useStaticQuery, graphql, Link } from 'gatsby'
 import React from 'react'
 
-export default function AdventSideNav() {
-  const data = useStaticQuery(graphql`
-    query {
-      allMdx {
-        nodes {
-          id
-          frontmatter {
-            year
-            puzz
-            title
-          }
-          internal {
-            contentFilePath
-          }
-        }
-      }
-    }
-  `)
+interface Props {
+  props: { year: string; puzz: string; title: string }[]
+}
 
-  const parse = (data: { allMdx: { nodes: any[] } }) => {
+export default function AdventSideNav(props: Props) {
+  const parse = (props: { props: any[] }) => {
     var m = new Map<string, { year: string; active: boolean; days: string[] }>()
-    data.allMdx.nodes.forEach((node) => {
+    props.props.forEach((node) => {
       if (m.has(node.frontmatter.year))
         m.get(node.frontmatter.year)?.days.push(node.frontmatter.puzz)
       else
@@ -43,7 +29,7 @@ export default function AdventSideNav() {
     ]
   }
 
-  const [expanded, setExpanded] = React.useState(parse(data))
+  const [expanded, setExpanded] = React.useState(parse(props))
 
   return (
     <nav className="sticky top-2 float-left mx-2 max-h-screen w-[15%] overflow-y-auto overflow-x-hidden  bg-chicPrimary">

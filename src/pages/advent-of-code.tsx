@@ -1,16 +1,16 @@
 import * as React from 'react'
 import type { HeadFC, PageProps } from 'gatsby'
-import { graphql, Link } from 'gatsby'
+import { graphql } from 'gatsby'
 import AdventSideNav from '../components/AdventSideNav'
 import Footer from '../components/Footer'
 import Header from '../components/Header'
 
-export default function AdventOfCodeYearIndex() {
+export default function AdventOfCodeYearIndex(result: any) {
   return (
     <>
       <Header />
       <div className="min-h-screen bg-chicPrimary">
-        <AdventSideNav />
+        <AdventSideNav props={result?.data.allMdx.nodes} />
         <div className="adventofcode max-w-[60%] ml-[20%] min-h-[1.95] mb-10">
           <h1 className="text-chicFive">Advent of Code</h1>
           <br />
@@ -115,10 +115,25 @@ export const Head: HeadFC = () => (
     <title>Joel-Allan-NZ - Advent of Code</title>
     <html lang="en" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://fonts.gstatic.com" />
     <link
       href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&family=Roboto+Serif:ital,opsz,wght@0,8..144,100..900;1,8..144,100..900&family=VT323&display=swap"
       rel="stylesheet"
     />
   </>
 )
+
+export const result = graphql`
+  query {
+    allMdx {
+      nodes {
+        id
+        frontmatter {
+          year
+          puzz
+          title
+        }
+      }
+    }
+  }
+`

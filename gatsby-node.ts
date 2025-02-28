@@ -42,6 +42,7 @@ exports.createPages = async ({ graphql, actions, reporter }) => {
           puzz: node.frontmatter.puzz,
           year: node.frontmatter.year,
           title: node.frontmatter.title,
+          list: result.data.allMdx.nodes,
         },
       })
     }
