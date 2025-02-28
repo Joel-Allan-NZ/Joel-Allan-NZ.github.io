@@ -1,4 +1,4 @@
-import { useStaticQuery, graphql } from 'gatsby'
+import { useStaticQuery, graphql, Link } from 'gatsby'
 import React from 'react'
 
 export default function AdventSideNav() {
@@ -114,13 +114,13 @@ export default function AdventSideNav() {
                 } overflow-y-auto overflow-x-hidden`}
               >
                 {expandedYear.days.map((day) => (
-                  <a
+                  <Link
                     key={`link to ${expandedYear.year}/${day}`}
                     className="ml-3 rounded text-chicFour flex h-8 min-h-full items-center px-5 leading-tight transition ease-in-out delay-50 duration-200 hover:bg-blue-200 hover:text-black hover:translate-x-1"
-                    href={`/advent-of-code/${expandedYear.year}/${day}`}
+                    to={`/advent-of-code/${expandedYear.year}/${day}`}
                   >
                     Day {day}
-                  </a>
+                  </Link>
                 ))}
               </div>
             </div>
