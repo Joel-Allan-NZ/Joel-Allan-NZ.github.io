@@ -9,10 +9,10 @@ export default function AdventOfCodeYearIndex() {
   return (
     <>
       <Header />
-      <div className="max-h-screen flex-row ">
+      <div className="h-0.95 bg-chicPrimary">
         <AdventSideNav />
-        <div className="adventofcode max-w-[70%] ml-[15%] h-[90%] overflow-y-auto">
-          <h1>Advent of Code</h1>
+        <div className="adventofcode max-w-[60%] ml-[20%] min-h-0.95">
+          <h1 className="text-chicFive">Advent of Code</h1>
           <br />
           <p>
             Just for fun, and in celebration of Advent of Code's 10th
@@ -72,8 +72,8 @@ export default function AdventOfCodeYearIndex() {
             No, that would be defeating the point. On occassion I do get lazy
             (especially with C# answers) and fail to remove calls to extension
             methods or other code that live outside of the solution file. These
-            are typically very basic utility methods, and hopefully any I use
-            will be visible <a href="c-sharp-extensions">here</a>.
+            are typically very basic utility methods, and should be{' '}
+            <a href="c-sharp-extensions">visible here</a>.
           </p>
         </div>
       </div>
@@ -81,4 +81,15 @@ export default function AdventOfCodeYearIndex() {
     </>
   )
 }
-export const Head: HeadFC = () => <title>Joel-Allan-NZ - Advent of Code</title>
+export const Head: HeadFC = () => (
+  <>
+    <title>Joel-Allan-NZ - Advent of Code</title>
+    <html lang="en" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&family=Roboto+Serif:ital,opsz,wght@0,8..144,100..900;1,8..144,100..900&family=VT323&display=swap"
+      rel="stylesheet"
+    />
+  </>
+)

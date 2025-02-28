@@ -46,17 +46,15 @@ export default function AdventSideNav() {
   const [expanded, setExpanded] = React.useState(parse(data))
 
   return (
-    <nav className="sticky top-0 float-left mx-2 max-h-screen w-[15%] overflow-y-auto overflow-x-hidden">
-      <h4 className="ml-1 text-xl bg-blue-50">
-        <a href="/advent-of-code">Advent of Code</a>
-      </h4>
+    <nav className="sticky top-2 float-left mx-2 max-h-screen w-[15%] overflow-y-auto overflow-x-hidden  bg-chicPrimary">
+      <h4 className="ml-1 text-xl text-blue-100">Advent of Code</h4>
       <div className="overflow-x-hidden overflow-y-scroll ">
         {expanded.map((expandedYear, index) => {
           return (
             <div
               key={`${expandedYear.year} collapsible overflow-y-auto overflow-x-hidden`}
             >
-              <div className="flex items-center p-0 leading-tight bg-blue-50 transition-all rounded-lg outline-none transition-colors ease-in-out delay-100 duration-200 hover:bg-blue-200">
+              <div className="flex items-center text-chicFour p-0 leading-tight transition-all rounded-lg outline-none transition-colors ease-in-out delay-100 duration-200 hover:bg-blue-200 hover:text-black">
                 <button
                   onClick={() =>
                     setExpanded((expanded) => [
@@ -66,7 +64,7 @@ export default function AdventSideNav() {
                     ])
                   }
                   type="button"
-                  className="flex items-center justify-between w-full p-3 font-sans text-xl antialiased font-semibold leading-snug text-left transition-colors border-b-0 select-none border-b-blue-gray-100 text-blue-gray-900 hover:text-blue-gray-900"
+                  className="flex items-center justify-between w-full p-3 font-sans rounded text-xl antialiased"
                 >
                   <p className="block mr-auto font-sans text-base antialiased font-normal leading-relaxed">
                     {expandedYear.year}
@@ -118,7 +116,7 @@ export default function AdventSideNav() {
                 {expandedYear.days.map((day) => (
                   <a
                     key={`link to ${expandedYear.year}/${day}`}
-                    className="ml-3 flex h-8 min-h-full items-center p-1 leading-tight transition ease-in-out delay-50 duration-200 hover:bg-blue-50 hover:translate-x-2"
+                    className="ml-3 rounded text-chicFour flex h-8 min-h-full items-center px-5 leading-tight transition ease-in-out delay-50 duration-200 hover:bg-blue-200 hover:text-black hover:translate-x-1"
                     href={`/advent-of-code/${expandedYear.year}/${day}`}
                   >
                     {day}

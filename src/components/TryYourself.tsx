@@ -56,7 +56,8 @@ export default function TryYourself({
     <div className="mb-10">
       <textarea
         name="puzzleinput"
-        className="w-full border border-black rounded-sm min-h-32"
+        aria-label="paste your input here"
+        className="w-full border border-black rounded min-h-32 bg-chicSecondary text-chicFour mb-2"
         placeholder="Paste your input here and try it out for yourself! :)"
         value={puzzleInput}
         onChange={(e) => {

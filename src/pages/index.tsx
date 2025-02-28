@@ -43,7 +43,12 @@ export default function IndexPage(props: PageProps) {
   )
 }
 
-export const Head: HeadFC = () => <title>Joel-Allan-NZ - Home</title>
+export const Head: HeadFC = () => (
+  <>
+    <title>Joel-Allan-NZ - Home</title>
+    <html lang="en" />
+  </>
+)
 
 //looking for the most okay code you've ever seen?
 

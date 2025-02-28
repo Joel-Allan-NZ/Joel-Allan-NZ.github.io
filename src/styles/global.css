@@ -4,8 +4,13 @@
 
 @layer base {
   h1 {
-    @apply text-2xl;
+    @apply text-3xl;
     @apply mb-3;
+    font-family: 'Roboto Serif', serif;
+    font-optical-sizing: auto;
+    font-weight: 500;
+    font-style: normal;
+    font-variation-settings: 'wdth' 100, 'GRAD' 0;
   }
   h2 {
     @apply text-xl;
@@ -22,12 +27,27 @@
     @apply my-2;
   }
   #gatsby-focus-wrapper {
-    @apply bg-blue-50;
+    @apply bg-chicPrimary;
   }
 }
 
 @layer components {
   .adventofcode a {
     @apply underline;
+    @apply decoration-chicThree;
+    @apply hover:text-chicThree;
+    @apply text-chicFive;
+    @apply hover:decoration-chicFive;
+  }
+
+  .adventofcode h2 {
+    @apply text-xl;
+    @apply mb-1;
+    @apply text-chicFive;
+  }
+
+  .adventofcode p {
+    @apply text-chicFive;
+    @apply mx-2;
   }
 }
