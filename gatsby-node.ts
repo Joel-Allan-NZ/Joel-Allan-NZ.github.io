@@ -26,10 +26,8 @@ exports.createPages = async ({ graphql, actions, reporter }) => {
     reporter.panicOnBuild('Error loading MDX result', result.errors)
   }
 
-  // Create blog post pages.
   const posts = result.data.allMdx.nodes
 
-  // you'll call `createPage` for each result
   posts
     .filter((x) => x.frontmatter.year == '2023')
     .forEach(

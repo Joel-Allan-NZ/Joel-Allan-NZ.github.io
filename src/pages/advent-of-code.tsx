@@ -9,27 +9,47 @@ export default function AdventOfCodeYearIndex() {
   return (
     <>
       <Header />
-      <div className="h-0.95 bg-chicPrimary">
+      <div className="min-h-screen bg-chicPrimary">
         <AdventSideNav />
-        <div className="adventofcode max-w-[60%] ml-[20%] min-h-0.95">
+        <div className="adventofcode max-w-[60%] ml-[20%] min-h-[1.95] mb-10">
           <h1 className="text-chicFive">Advent of Code</h1>
           <br />
           <p>
-            Just for fun, and in celebration of Advent of Code's 10th
-            anniversary, I thought I'd share my AOC solutions here in a couple
-            languages, along with some brief notes on my solution, focusing on
-            anything out of the usual. If nothing else, it's a good excuse to go
-            back through some old code, and give it a thorough refactor and
-            performance pass. 10 year old code ought to be pretty embarassing to
-            look at, and I bet it was not terribly idiomatic!
+            Just for fun (and in celebration of Advent of Code's 10th
+            anniversary) I thought I'd share my AOC solutions here in a few
+            programming languages, along with some brief notes on my solution,
+            mostly focusing on anything out of the usual. Very few will be
+            perfect solutions, but I ensure they're adequately performant - no
+            naive solutions to complex problems, but also no particular eye cast
+            towards the best possible solution times.{' '}
+          </p>
+          <br />
+          <p>
+            {' '}
+            Perhaps sharing sub-optimal code sounds a little silly, but it's
+            more appreciation of the hard work that goes into running Advent of
+            Code than an exercise in showing off. If nothing else, it's a good
+            excuse to go back through some old code, and give it a thorough
+            refactor and performance pass. 10 year old code ought to be pretty
+            embarassing to look at, and I bet it was not terribly idiomatic!
           </p>
           <br />
           <p>
             Additionally, at the bottom of each page is some space for you to
             paste your own inputs, and run my code to see if the solution
-            handles all cases (fingers crossed!)
+            handles your personal input well (fingers crossed!)
           </p>
           <br />
+          <p>
+            Currently there are only two years and two languages visible here;
+            more to come as I have time to update and add the other 8 years of
+            solutions.
+          </p>
+          <br />
+          <p>
+            Now, with my justifications out of the way, perhaps it's time for a
+            small FAQ (not that anyone will actually be asking questions!)
+          </p>
           <br />
           <br />
           <h2>What is it?</h2>
@@ -45,7 +65,8 @@ export default function AdventOfCodeYearIndex() {
             provide a single test with a known result. It's up to you to work
             out how to solve it, write other tests, and ideally complete it
             quickly enough to make it onto the leaderboard (and that gets harder
-            every year!)
+            every year - it crossed the million registered user mark back in
+            2022)
           </p>
           <br />
           <p>
@@ -74,6 +95,14 @@ export default function AdventOfCodeYearIndex() {
             methods or other code that live outside of the solution file. These
             are typically very basic utility methods, and should be{' '}
             <a href="c-sharp-extensions">visible here</a>.
+          </p>
+          <br />
+          <br />
+          <h2>How about AI tools?</h2>
+          <p>
+            Nope, for exactly the same reason. In fact, AoC requests you don't
+            use AI tools until each day's leaderboard is already filled. "The
+            leaderboards are for human competitors."
           </p>
         </div>
       </div>

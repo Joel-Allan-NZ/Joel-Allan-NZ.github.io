@@ -19,7 +19,7 @@ export default function Layout({
   return (
     <>
       <Header />
-      <div className="max-h-0.95 bg-chicPrimary">
+      <div className="min-h-screen bg-chicPrimary">
         <AdventSideNav />
         <div className="adventofcode max-w-[60%] ml-[20%]">
           <h1>

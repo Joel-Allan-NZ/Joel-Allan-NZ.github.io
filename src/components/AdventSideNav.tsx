@@ -119,7 +119,7 @@ export default function AdventSideNav() {
                     className="ml-3 rounded text-chicFour flex h-8 min-h-full items-center px-5 leading-tight transition ease-in-out delay-50 duration-200 hover:bg-blue-200 hover:text-black hover:translate-x-1"
                     href={`/advent-of-code/${expandedYear.year}/${day}`}
                   >
-                    {day}
+                    Day {day}
                   </a>
                 ))}
               </div>
