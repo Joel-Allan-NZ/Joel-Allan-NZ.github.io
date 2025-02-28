@@ -7,6 +7,15 @@ interface Props {
 
 export default function AdventSideNav(props: Props) {
   const parse = (props: { props: any[] }) => {
+    // const years: { year: string; active: boolean; days: string[] }[] = [
+    //   { year: '2024', active: false, days: [] },
+    //   { year: '2023', active: false, days: [] },
+    // ]
+    // for (let i = 1; i < 26; i++) {
+    //   years[0].days.push(i.toString())
+    //   years[1].days.push(i.toString())
+    // }
+    // return [...years]
     var m = new Map<string, { year: string; active: boolean; days: string[] }>()
     props.props.forEach((node) => {
       if (m.has(node.frontmatter.year))
@@ -18,14 +27,18 @@ export default function AdventSideNav(props: Props) {
           days: [node.frontmatter.puzz],
         })
     })
-    m.values()
-      .toArray()
-      .forEach((x) => x.days.sort((x, y) => parseInt(x) - parseInt(y)))
+    ;[...m.values()].forEach((a) =>
+      a.days.sort((x, y) => parseInt(x) - parseInt(y))
+    )
+
+    // v.get('2023')
+    // v.forEach
+    // m.values()
+    //   .toArray()
+    // v.forEach((x) => x.days.sort((x, y) => parseInt(x) - parseInt(y)))
+    // console.log(v)
     return [
-      ...m
-        .values()
-        .toArray()
-        .sort((x, y) => parseInt(y.year) - parseInt(x.year)),
+      ...[...m.values()].sort((x, y) => parseInt(y.year) - parseInt(x.year)),
     ]
   }
 

@@ -1,5 +1,6 @@
 import * as React from 'react'
 import type { HeadFC } from 'gatsby'
+import { graphql } from 'gatsby'
 import CodeBox from '../../components/CodeBox'
 import Header from '../../components/Header'
 import AdventSideNav from '../../components/AdventSideNav'
@@ -8,14 +9,13 @@ import { Highlight, Prism, themes } from 'prism-react-renderer'
 ;(typeof global !== 'undefined' ? global : window).Prism = Prism
 require('prismjs/components/prism-csharp')
 
-export default function CSharpExtensions() {
+export default function CSharpExtensions(result: any) {
   const pairs = `
       public static IEnumerable<T[]> UniquePairs<T>(this IEnumerable<T> collection) =>
           collection.SkipLast(1)
                     .SelectMany(
                                 (x, i) => collection.Skip(i + 1)
                                                     .Select<T, T[]>(y => [x, y]));
-
 
       public static IEnumerable<T[]> Pairs<T>(this IEnumerable<T> collection) =>
           collection.SkipLast(1)
@@ -27,8 +27,8 @@ export default function CSharpExtensions() {
   return (
     <>
       <Header />
-      <AdventSideNav />
-      <div className="adventofcode max-w-[70%] ml-[10%]">
+      <AdventSideNav props={result?.data.allMdx.nodes} />
+      <div className="adventofcode max-w-[70%] ml-[20%] min-h-screen">
         <p>
           Here are a few of the very simple extensions methods I tend to use in
           C# code. These two are purely to avoid writing multiple nested loops
@@ -62,3 +62,18 @@ export default function CSharpExtensions() {
 }
 
 export const Head: HeadFC = () => <title>Joel-Allan-NZ - Advent Of Code</title>
+
+export const result = graphql`
+  query {
+    allMdx {
+      nodes {
+        id
+        frontmatter {
+          year
+          puzz
+          title
+        }
+      }
+    }
+  }
+`
